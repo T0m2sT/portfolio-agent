@@ -1,7 +1,7 @@
 {
-  "cash": 100.00,
+  "cash": 100.0,
   "holdings": [],
   "watchlist": [],
-  "last_run": null,
+  "last_run": "2026-04-20T19:14:56.088973+00:00",
   "last_alert": null
 }
