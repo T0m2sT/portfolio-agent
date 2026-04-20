@@ -39,3 +39,16 @@ def test_fetch_news_returns_empty_on_error(requests_mock):
     requests_mock.get("https://newsapi.org/v2/everything", status_code=429)
     result = fetch_news(["NVDA"], api_key="test-key")
     assert result == {"NVDA": []}
+
+def test_fetch_prices_handles_exception():
+    with patch("agent.fetcher.yf.Ticker", side_effect=Exception("network error")):
+        result = fetch_prices(["NVDA"])
+    assert result == {}
+
+def test_fetch_news_handles_exception(requests_mock):
+    requests_mock.get(
+        "https://newsapi.org/v2/everything",
+        exc=Exception("connection error")
+    )
+    result = fetch_news(["NVDA"], api_key="test-key")
+    assert result == {"NVDA": []}

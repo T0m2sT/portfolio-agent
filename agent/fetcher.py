@@ -1,5 +1,9 @@
+import logging
+
 import yfinance as yf
 import requests
+
+logger = logging.getLogger(__name__)
 
 
 def fetch_prices(tickers: list[str]) -> dict[str, dict]:
@@ -15,11 +19,12 @@ def fetch_prices(tickers: list[str]) -> dict[str, dict]:
             t = yf.Ticker(ticker)
             last = t.fast_info.last_price
             prev = t.fast_info.previous_close
-            if last is None or prev is None:
+            if last is None or prev is None or prev == 0:
                 continue
             pct = ((last - prev) / prev) * 100
             prices[ticker] = {"price": round(last, 2), "pct_change": round(pct, 1)}
-        except Exception:
+        except Exception as exc:
+            logger.warning("fetch_prices failed for %s: %r", ticker, exc)
             continue
     return prices
 
@@ -54,6 +59,7 @@ def fetch_news(tickers: list[str], api_key: str) -> dict[str, list[str]]:
                 continue
             articles = resp.json().get("articles", [])
             news[ticker] = [a["title"] for a in articles[:3]]
-        except Exception:
+        except Exception as exc:
+            logger.warning("fetch_news failed for %s: %r", ticker, exc)
             news[ticker] = []
     return news
