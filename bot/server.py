@@ -108,6 +108,22 @@ def webhook():
                 lines.append(f"\n👀 Watching: {', '.join(portfolio['watchlist'])}")
             send(chat_id, "\n".join(lines))
 
+        elif text == "/log":
+            portfolio = get_portfolio()
+            trades = portfolio.get("trade_log", [])
+            if not trades:
+                send(chat_id, "📋 No closed trades yet.")
+            else:
+                total_pnl = sum(t["pnl"] for t in trades)
+                lines = ["📋 *Trade Log*\n"]
+                for t in trades:
+                    emoji = "🟢" if t["pnl"] >= 0 else "🔴"
+                    pnl_str = f"+€{t['pnl']:.2f}" if t["pnl"] >= 0 else f"-€{abs(t['pnl']):.2f}"
+                    lines.append(f"{emoji} {t['ticker']} — {t['shares']} shares\n   Buy €{t['avg_buy_price']:.2f} → Sell €{t['sell_price']:.2f} | {pnl_str}\n   {t['closed_at']}")
+                total_str = f"+€{total_pnl:.2f}" if total_pnl >= 0 else f"-€{abs(total_pnl):.2f}"
+                lines.append(f"\n*Total P&L: {total_str}*")
+                send(chat_id, "\n".join(lines))
+
         elif text == "/status":
             portfolio = get_portfolio()
             last_run = portfolio.get("last_run", "Never")

@@ -1,6 +1,9 @@
 import json
 from datetime import datetime, timezone
 
+def _now_utc() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+
 PORTFOLIO_PATH = "portfolio.json"
 
 
@@ -45,9 +48,20 @@ def apply_action(portfolio: dict, action: dict) -> dict:
             sell_shares = holding["shares"] * pct
         sell_shares = min(sell_shares, holding["shares"])
         cash += sell_shares * price
+        pnl = round((price - holding["avg_buy_price"]) * sell_shares, 2)
+        trade = {
+            "ticker": ticker,
+            "shares": round(sell_shares, 8),
+            "avg_buy_price": holding["avg_buy_price"],
+            "sell_price": price,
+            "pnl": pnl,
+            "closed_at": _now_utc(),
+        }
         holding["shares"] = round(holding["shares"] - sell_shares, 8)
         holdings = [h for h in holdings if h["shares"] > 0.00001]
-        return {**portfolio, "holdings": holdings, "cash": round(cash, 2)}
+        trade_log = list(portfolio.get("trade_log", []))
+        trade_log.append(trade)
+        return {**portfolio, "holdings": holdings, "cash": round(cash, 2), "trade_log": trade_log}
 
     if action["action"] == "BUY":
         price = action.get("last_price", 1.0)
