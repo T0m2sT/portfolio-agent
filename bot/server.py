@@ -153,9 +153,18 @@ def webhook():
             send(chat_id, "🔄 Portfolio reset to €100.00 cash, no holdings.")
 
         elif text == "/status":
+            from datetime import datetime, timezone, timedelta
             portfolio = get_portfolio()
             last_run = portfolio.get("last_run", "Never")
-            send(chat_id, f"🕐 Last run: {last_run}\n⏱ Next run: within 4 hours")
+            now = datetime.now(timezone.utc)
+            next_hour = ((now.hour // 4) + 1) * 4
+            next_run = now.replace(minute=0, second=0, microsecond=0)
+            if next_hour >= 24:
+                next_run = (next_run + timedelta(days=1)).replace(hour=0)
+            else:
+                next_run = next_run.replace(hour=next_hour)
+            mins_away = int((next_run - now).total_seconds() / 60)
+            send(chat_id, f"🕐 Last run: {last_run}\n⏭ Next run: {next_run.strftime('%H:%M UTC')} (in {mins_away}m)")
 
         elif text.startswith("/buy"):
             parts = text.split()
