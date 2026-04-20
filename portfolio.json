@@ -1,11 +1,11 @@
 {
-  "cash": 62.12,
+  "cash": 62.2,
   "holdings": [
     {
       "ticker": "NVDA",
       "shares": 0.2,
-      "avg_buy_price": 189.4,
-      "last_price": 189.4
+      "avg_buy_price": 189.0,
+      "last_price": 189.0
     }
   ],
   "watchlist": [
