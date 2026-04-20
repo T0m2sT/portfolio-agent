@@ -72,7 +72,23 @@ def webhook():
         return "ok", 200
 
     try:
-        if text == "/reason":
+        if text == "/help":
+            send(chat_id, (
+                "📖 *Commands*\n\n"
+                "/portfolio — current holdings, cash, and P&L\n"
+                "/log — closed trade history with total P&L\n"
+                "/status — last agent run time\n"
+                "/reason — reasoning behind last BUY/SELL alert\n"
+                "/ask [question] — ask Claude anything about your portfolio\n\n"
+                "/buy TICKER SHARES PRICE\n"
+                "  _e.g. /buy NVDA 2 118.40_\n\n"
+                "/sell TICKER AMOUNT [PRICE]\n"
+                "  _e.g. /sell NVDA 50% 191.20_\n"
+                "  _e.g. /sell NVDA ALL_\n\n"
+                "/reset — wipe portfolio back to €100 clean state"
+            ))
+
+        elif text == "/reason":
             portfolio = get_portfolio()
             alert = portfolio.get("last_alert")
             if not alert:
