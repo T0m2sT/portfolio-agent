@@ -36,6 +36,11 @@ def test_parse_response_invalid_raises():
     with pytest.raises(ValueError):
         parse_response("not json at all")
 
+def test_parse_response_strips_preamble_and_markdown():
+    raw = 'Here is the JSON:\n```json\n{"actions": [], "watchlist_additions": [], "watchlist_removals": []}\n```'
+    result = parse_response(raw)
+    assert result["actions"] == []
+
 def test_analyse_calls_claude(mocker):
     mock_client = MagicMock()
     mock_client.messages.create.return_value.content = [

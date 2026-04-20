@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import anthropic
 
 logger = logging.getLogger(__name__)
@@ -52,12 +53,11 @@ def build_prompt(portfolio: dict, prices: dict, news: dict) -> str:
 
 def parse_response(raw: str) -> dict:
     cleaned = raw.strip()
-    if cleaned.startswith("```"):
-        cleaned = cleaned.split("```")[1]
-        if cleaned.startswith("json"):
-            cleaned = cleaned[4:]
+    match = re.search(r"```(?:json)?\s*([\s\S]*?)```", cleaned)
+    if match:
+        cleaned = match.group(1).strip()
     try:
-        return json.loads(cleaned.strip())
+        return json.loads(cleaned)
     except json.JSONDecodeError as e:
         raise ValueError(f"Claude returned invalid JSON: {e}\nRaw: {raw}")
 
@@ -65,10 +65,15 @@ def parse_response(raw: str) -> dict:
 def analyse(portfolio: dict, prices: dict, news: dict, api_key: str) -> dict:
     client = anthropic.Anthropic(api_key=api_key)
     prompt = build_prompt(portfolio, prices, news)
-    response = client.messages.create(
-        model="claude-haiku-4-5-20251001",
-        max_tokens=1024,
-        system=SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    return parse_response(response.content[0].text)
+    try:
+        response = client.messages.create(
+            model="claude-haiku-4-5-20251001",
+            max_tokens=1024,
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": prompt}],
+        )
+    except anthropic.APIError as exc:
+        raise RuntimeError(f"Claude API call failed: {exc}") from exc
+    result = parse_response(response.content[0].text)
+    logger.info("analyse complete: %d actions returned", len(result.get("actions", [])))
+    return result
