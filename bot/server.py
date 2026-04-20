@@ -47,6 +47,7 @@ def get_portfolio() -> dict:
 
 def save_portfolio_github(portfolio: dict) -> None:
     meta = requests.get(_GITHUB_API, headers=_GITHUB_HEADERS, timeout=10)
+    logger.info("GitHub GET status: %d", meta.status_code)
     meta.raise_for_status()
     sha = meta.json()["sha"]
     content = base64.b64encode(json.dumps(portfolio, indent=2).encode()).decode()
@@ -56,6 +57,7 @@ def save_portfolio_github(portfolio: dict) -> None:
         json={"message": "chore: manual portfolio update via bot [skip ci]", "content": content, "sha": sha},
         timeout=10,
     )
+    logger.info("GitHub PUT status: %d body: %s", resp.status_code, resp.text[:200])
     resp.raise_for_status()
 
 @app.route(f"/webhook/{TELEGRAM_TOKEN}", methods=["POST"])
