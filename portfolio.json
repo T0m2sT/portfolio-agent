@@ -1,13 +1,6 @@
 {
-  "cash": 35.1,
-  "holdings": [
-    {
-      "ticker": "NVDA",
-      "shares": 0.5,
-      "avg_buy_price": 150.0,
-      "last_price": 150.0
-    }
-  ],
+  "cash": 102.6,
+  "holdings": [],
   "watchlist": [
     "SPY",
     "QQQ",
@@ -41,6 +34,14 @@
       "sell_price": 200.0,
       "pnl": 1.5,
       "closed_at": "2026-04-20 23:00 UTC"
+    },
+    {
+      "ticker": "NVDA",
+      "shares": 0.5,
+      "avg_buy_price": 150.0,
+      "sell_price": 135.0,
+      "pnl": -7.5,
+      "closed_at": "2026-04-20 23:03 UTC"
     }
   ]
 }
