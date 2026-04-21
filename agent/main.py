@@ -1,10 +1,10 @@
 import os
 import logging
 from dotenv import load_dotenv
-from agent.portfolio import load_portfolio, save_portfolio, apply_action
+from agent.portfolio import load_portfolio, save_portfolio
 from agent.fetcher import fetch_prices, fetch_news, fetch_trending_tickers
 from agent.analyst import analyse
-from agent.notifier import format_alert, send_message
+from agent.notifier import format_alert, format_no_action, send_message
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -48,17 +48,6 @@ def run() -> None:
                 watchlist.remove(removal)
         portfolio = {**portfolio, "watchlist": watchlist}
 
-        # Apply actions and update last_price on each holding
-        for action in result.get("actions", []):
-            ticker = action["ticker"]
-            price_data = prices.get(ticker, {})
-            last_price = price_data.get("price", 0)
-            if last_price == 0 and action.get("action") == "BUY":
-                logger.warning("Skipping BUY for %s — no price data available", ticker)
-                continue
-            action_with_price = {**action, "last_price": last_price}
-            portfolio = apply_action(portfolio, action_with_price)
-
         # Store last alert — use last non-HOLD action for reasoning
         actions = result.get("actions", [])
         non_hold = [a for a in actions if a.get("action") != "HOLD"]
@@ -74,15 +63,16 @@ def run() -> None:
         logger.info("Saving updated portfolio state")
         save_portfolio(portfolio)
 
-        # Send Telegram alerts for non-HOLD actions only
-        sent = 0
-        for action in actions:
-            if action["action"] != "HOLD":
+        # Send Telegram alerts — non-HOLD actions individually, all-HOLD as a single summary
+        if non_hold:
+            for action in non_hold:
                 msg = format_alert(action, prices)
                 send_message(telegram_token, telegram_chat_id, msg)
-                sent += 1
-
-        logger.info("Run complete — %d alert(s) sent", sent)
+            logger.info("Run complete — %d signal(s) sent", len(non_hold))
+        else:
+            msg = format_no_action(actions, prices)
+            send_message(telegram_token, telegram_chat_id, msg)
+            logger.info("Run complete — no action signal sent")
 
     except Exception as exc:
         logger.error("Portfolio agent run failed: %r", exc)

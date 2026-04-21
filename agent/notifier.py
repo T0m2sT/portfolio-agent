@@ -35,6 +35,27 @@ def format_alert(action: dict, prices: dict) -> str:
     return f"{title}\n{now}\n\n{body}\n\nReply /reason to see full analysis"
 
 
+def format_no_action(actions: list, prices: dict) -> str:
+    now = datetime.now(timezone.utc).strftime("%a %d %b · %H:%M UTC")
+    lines = [f"🟡 NO ACTION — {now}", ""]
+    lines.append("Agent ran and reviewed all positions. No high-conviction signal found.")
+    if actions:
+        lines.append("")
+        lines.append("Positions reviewed:")
+        for a in actions:
+            ticker = a["ticker"]
+            price_data = prices.get(ticker, {})
+            raw_price = price_data.get("price", None)
+            price = f"€{raw_price:.2f}" if raw_price is not None else "N/A"
+            pct = price_data.get("pct_change", 0)
+            pct_str = f"+{pct:.1f}%" if pct >= 0 else f"{pct:.1f}%"
+            note = a.get("reasoning", "Holding.")
+            lines.append(f"  • {ticker} {price} ({pct_str}) — {note}")
+    lines.append("")
+    lines.append("Reply /reason to see last active signal")
+    return "\n".join(lines)
+
+
 def format_portfolio(portfolio: dict) -> str:
     lines = ["📊 *Portfolio Summary*\n"]
     lines.append(f"💵 Cash: €{portfolio['cash']:.2f}")
