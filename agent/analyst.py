@@ -40,10 +40,12 @@ Return a JSON object. No markdown, no text outside the JSON.
 }
 
 Action rules:
-- HOLD: no amount field needed. Include with a brief note on why no action.
+- **You MUST include one entry per holding and one entry per watchlist ticker in "actions".** Every position must be accounted for.
+- HOLD: no amount field needed. Include a 1-2 sentence note on why no action.
 - SELL: amount must be "ALL", "50%", "30%", "20%" etc. Default to partial unless thesis is fully broken.
 - BUY: amount must be a euro value like "23.40" (never exceed 40% of available cash in one trade)
-- Every action must have a "reasoning" field. Vague reasoning = HOLD instead."""
+- Every action must have a "reasoning" field. Vague reasoning = HOLD instead.
+- An empty "actions" array is NEVER acceptable. If you have nothing to say, output HOLD for each position."""
 
 
 def build_prompt(portfolio: dict, prices: dict, news: dict, trending: list[str] | None = None) -> str:

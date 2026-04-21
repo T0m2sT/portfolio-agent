@@ -73,15 +73,16 @@ def format_portfolio(portfolio: dict) -> str:
 
 def send_message(token: str, chat_id: str, text: str) -> None:
     url = f"https://api.telegram.org/bot{token}/sendMessage"
+    logger.info("Sending Telegram message to chat_id=%s (len=%d)", chat_id, len(text))
     try:
         resp = requests.post(
             url,
             json={"chat_id": chat_id, "text": text, "parse_mode": "Markdown"},
             timeout=10,
         )
-        resp.raise_for_status()
         payload = resp.json()
+        logger.info("Telegram response: status=%s ok=%s description=%s", resp.status_code, payload.get("ok"), payload.get("description"))
         if not payload.get("ok"):
-            logger.error("Telegram API error: %s", payload.get("description"))
+            logger.error("Telegram API rejected message: %s", payload.get("description"))
     except requests.RequestException as exc:
         logger.error("Failed to send Telegram message: %r", exc)
