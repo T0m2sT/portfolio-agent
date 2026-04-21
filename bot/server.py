@@ -4,7 +4,6 @@ import base64
 import logging
 import anthropic
 import requests
-import yfinance as yf
 from flask import Flask, request
 from agent.portfolio import apply_action
 
@@ -39,15 +38,6 @@ def send(chat_id: str, text: str) -> None:
     except requests.RequestException as exc:
         logger.error("Failed to send message: %r", exc)
 
-
-def get_eurusd() -> float:
-    try:
-        hist = yf.Ticker("EURUSD=X").history(period="5d")
-        if hist.empty:
-            return 1.0
-        return float(hist["Close"].iloc[-1])
-    except Exception:
-        return 1.0
 
 
 def get_portfolio() -> dict:
@@ -91,11 +81,12 @@ def webhook():
                 "/status — last agent run time\n"
                 "/reason — reasoning behind last BUY/SELL alert\n"
                 "/ask [question] — ask Claude anything about your portfolio\n\n"
-                "/buy TICKER SHARES PRICE\n"
-                "  _e.g. /buy NVDA 2 118.40_\n\n"
-                "/sell TICKER AMOUNT [PRICE]\n"
-                "  _e.g. /sell NVDA 50% 191.20_\n"
-                "  _e.g. /sell NVDA ALL_\n\n"
+                "/buy TICKER SHARES PRICE\\_USD COST\\_EUR\n"
+                "  _e.g. /buy NVDA 2 118.40 221.35_\n\n"
+                "/sell TICKER SHARES|%|ALL PRICE\\_USD PROCEEDS\\_EUR\n"
+                "  _e.g. /sell NVDA 2 191.20 358.40_\n"
+                "  _e.g. /sell NVDA 50% 191.20 358.40_\n"
+                "  _e.g. /sell NVDA ALL 191.20 716.80_\n\n"
                 "/reset — wipe portfolio back to €100 clean state"
             ))
 
@@ -128,9 +119,7 @@ def webhook():
             portfolio = get_portfolio()
             lines = [f"📊 *Portfolio*\n💵 Cash: €{portfolio['cash']:.2f}\n\n*Holdings:*"]
             for h in portfolio.get("holdings", []):
-                pnl = (h["last_price"] - h["avg_buy_price"]) * h["shares"]
-                pnl_str = f"+€{pnl:.2f}" if pnl >= 0 else f"-€{abs(pnl):.2f}"
-                lines.append(f"  {h['ticker']}: {h['shares']} shares | P&L: {pnl_str}")
+                lines.append(f"  {h['ticker']}: {h['shares']} shares | Cost: €{h['total_cost_eur']:.2f} | Last: ${h['last_price_usd']:.2f}")
             if portfolio.get("watchlist"):
                 lines.append(f"\n👀 Watching: {', '.join(portfolio['watchlist'])}")
             send(chat_id, "\n".join(lines))
@@ -146,9 +135,7 @@ def webhook():
                 for t in trades:
                     emoji = "🟢" if t["pnl"] >= 0 else "🔴"
                     pnl_str = f"+€{t['pnl']:.2f}" if t["pnl"] >= 0 else f"-€{abs(t['pnl']):.2f}"
-                    fx_fee = t.get("fx_fee", 0)
-                    fee_str = f" (−€{fx_fee:.4f} FX)" if fx_fee else ""
-                    lines.append(f"{emoji} {t['ticker']} — {t['shares']} shares\n   Buy €{t['avg_buy_price']:.4f} → Sell €{t['sell_price']:.4f}{fee_str} | {pnl_str}\n   {t['closed_at']}")
+                    lines.append(f"{emoji} {t['ticker']} — {t['shares']} shares @ ${t['price_usd']:.2f}\n   Cost €{t['cost_eur']:.2f} → Proceeds €{t['proceeds_eur']:.2f} | {pnl_str}\n   {t['closed_at']}")
                 total_str = f"+€{total_pnl:.2f}" if total_pnl >= 0 else f"-€{abs(total_pnl):.2f}"
                 lines.append(f"\n*Total P&L: {total_str}*")
                 send(chat_id, "\n".join(lines))
@@ -183,67 +170,76 @@ def webhook():
 
         elif text.startswith("/buy"):
             parts = text.split()
-            if len(parts) != 4:
-                send(chat_id, "Usage: `/buy TICKER SHARES PRICE_USD`\nExample: `/buy NVDA 2 118.40`\n_Price is in USD — converted to EUR automatically._")
+            if len(parts) != 5:
+                send(chat_id, (
+                    "Usage: `/buy TICKER SHARES PRICE_USD COST_EUR`\n"
+                    "Example: `/buy NVDA 2 118.40 221.35`\n"
+                    "_COST\\_EUR is the exact amount debited in T212._"
+                ))
             else:
-                _, ticker, shares_str, price_str = parts
+                _, ticker, shares_str, price_str, cost_str = parts
                 ticker = ticker.upper()
                 try:
                     shares = float(shares_str)
                     price_usd = float(price_str)
-                    if shares <= 0 or price_usd <= 0:
+                    cost_eur = float(cost_str)
+                    if shares <= 0 or price_usd <= 0 or cost_eur <= 0:
                         raise ValueError
                 except ValueError:
-                    send(chat_id, "⚠️ Shares and price must be positive numbers.")
+                    send(chat_id, "⚠️ Shares, price and cost must be positive numbers.")
                 else:
-                    eurusd = get_eurusd()
-                    price_eur = round(price_usd / eurusd, 4)
                     portfolio = get_portfolio()
-                    cost = round(shares * price_eur, 2)
-                    if cost > portfolio["cash"]:
-                        send(chat_id, f"⚠️ Not enough cash. You have €{portfolio['cash']:.2f}, this costs €{cost:.2f} (${price_usd:.2f} @ {eurusd:.4f}).")
+                    if cost_eur > portfolio["cash"]:
+                        send(chat_id, f"⚠️ Not enough cash. You have €{portfolio['cash']:.2f}, this costs €{cost_eur:.2f}.")
                     else:
-                        action = {"action": "BUY", "ticker": ticker, "amount": str(cost), "last_price": price_eur}
+                        action = {"action": "BUY", "ticker": ticker, "shares": shares, "price_usd": price_usd, "cost_eur": cost_eur}
                         updated = apply_action(portfolio, action)
                         save_portfolio_github(updated)
-                        send(chat_id, f"✅ *BUY recorded*\n{shares} shares of {ticker} @ ${price_usd:.2f} → €{price_eur:.4f}\nCost: €{cost:.2f} | Cash left: €{updated['cash']:.2f}")
+                        send(chat_id, f"✅ *BUY recorded*\n{shares} shares of {ticker} @ ${price_usd:.2f}\nCost: €{cost_eur:.2f} | Cash left: €{updated['cash']:.2f}")
 
         elif text.startswith("/sell"):
             parts = text.split()
-            if len(parts) not in (3, 4):
-                send(chat_id, "Usage: `/sell TICKER AMOUNT PRICE_USD`\nExamples:\n`/sell NVDA 50% 191.20`\n`/sell NVDA ALL 191.20`\n_Price is in USD — converted to EUR automatically._")
+            if len(parts) != 5:
+                send(chat_id, (
+                    "Usage: `/sell TICKER SHARES|%|ALL PRICE_USD PROCEEDS_EUR`\n"
+                    "Examples:\n"
+                    "`/sell NVDA 2 191.20 358.40`\n"
+                    "`/sell NVDA 50% 191.20 358.40`\n"
+                    "`/sell NVDA ALL 191.20 716.80`\n"
+                    "_PROCEEDS\\_EUR is the exact amount credited in T212 (net of fees)._"
+                ))
             else:
-                _, ticker, amount = parts[0], parts[1], parts[2]
-                price_str = parts[3] if len(parts) == 4 else None
+                _, ticker, amount, price_str, proceeds_str = parts
                 ticker = ticker.upper()
                 amount_up = amount.upper()
-                if amount_up != "ALL" and not (amount_up.endswith("%") and amount_up[:-1].replace(".", "").isdigit()):
-                    send(chat_id, "⚠️ Amount must be a percentage like `50%` or `ALL`.\nExample: `/sell NVDA 50% 191.20`")
+                valid_amount = (
+                    amount_up == "ALL"
+                    or (amount_up.endswith("%") and amount_up[:-1].replace(".", "").isdigit())
+                    or amount_up.replace(".", "").isdigit()
+                )
+                if not valid_amount:
+                    send(chat_id, "⚠️ Shares must be a number, a percentage like `50%`, or `ALL`.")
                 else:
-                    override_price_eur = None
-                    price_usd = None
-                    if price_str is not None:
-                        try:
-                            price_usd = float(price_str)
-                            if price_usd <= 0:
-                                raise ValueError
-                            eurusd = get_eurusd()
-                            override_price_eur = round(price_usd / eurusd, 4)
-                        except ValueError:
-                            send(chat_id, "⚠️ Price must be a positive number.")
-                            amount_up = None
-                    if amount_up is not None:
+                    try:
+                        price_usd = float(price_str)
+                        proceeds_eur = float(proceeds_str)
+                        if price_usd <= 0 or proceeds_eur <= 0:
+                            raise ValueError
+                    except ValueError:
+                        send(chat_id, "⚠️ Price and proceeds must be positive numbers.")
+                    else:
                         portfolio = get_portfolio()
                         holding = next((h for h in portfolio["holdings"] if h["ticker"] == ticker), None)
                         if not holding:
                             send(chat_id, f"⚠️ You don't hold {ticker}.")
                         else:
-                            price_eur = override_price_eur if override_price_eur is not None else holding["last_price"]
-                            action = {"action": "SELL", "ticker": ticker, "amount": amount_up, "last_price": price_eur}
+                            action = {"action": "SELL", "ticker": ticker, "amount": amount_up, "price_usd": price_usd, "proceeds_eur": proceeds_eur}
                             updated = apply_action(portfolio, action)
+                            last_trade = updated.get("trade_log", [{}])[-1]
+                            pnl = last_trade.get("pnl", 0)
+                            pnl_str = f"+€{pnl:.2f}" if pnl >= 0 else f"-€{abs(pnl):.2f}"
                             save_portfolio_github(updated)
-                            usd_str = f" (${price_usd:.2f})" if price_usd else ""
-                            send(chat_id, f"✅ *SELL recorded*\n{ticker} {amount_up} @ €{price_eur:.4f}{usd_str} | Cash now: €{updated['cash']:.2f}")
+                            send(chat_id, f"✅ *SELL recorded*\n{ticker} {amount_up} @ ${price_usd:.2f}\nProceeds: €{proceeds_eur:.2f} | P&L: {pnl_str} | Cash now: €{updated['cash']:.2f}")
 
     except Exception as exc:
         logger.error("Webhook handler error: %r", exc)

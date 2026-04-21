@@ -39,45 +39,54 @@ def apply_action(portfolio: dict, action: dict) -> dict:
         holding = next((h for h in holdings if h["ticker"] == ticker), None)
         if not holding:
             return {**portfolio, "holdings": holdings, "cash": cash}
-        price = action.get("last_price", holding["last_price"])
+        price_usd = action["price_usd"]
+        proceeds_eur = action["proceeds_eur"]
         amount = action["amount"].upper()
+        total_shares = holding["shares"]
         if amount == "ALL":
-            sell_shares = holding["shares"]
+            sell_shares = total_shares
+        elif amount.endswith("%"):
+            pct = float(amount[:-1]) / 100
+            sell_shares = total_shares * pct
         else:
-            pct = float(amount.replace("%", "")) / 100
-            sell_shares = holding["shares"] * pct
-        sell_shares = min(sell_shares, holding["shares"])
-        gross_proceeds = sell_shares * price
-        fx_fee = round(gross_proceeds * 0.005, 4)  # Trading 212 0.5% FX fee
-        net_proceeds = gross_proceeds - fx_fee
-        cash += net_proceeds
-        pnl = round((price - holding["avg_buy_price"]) * sell_shares - fx_fee, 2)
+            sell_shares = float(amount)
+        sell_shares = min(round(sell_shares, 8), total_shares)
+        sell_fraction = sell_shares / total_shares
+        cost_basis = round(holding["total_cost_eur"] * sell_fraction, 4)
+        pnl = round(proceeds_eur - cost_basis, 2)
+        cash += proceeds_eur
         trade = {
             "ticker": ticker,
-            "shares": round(sell_shares, 8),
-            "avg_buy_price": holding["avg_buy_price"],
-            "sell_price": price,
-            "fx_fee": fx_fee,
+            "shares": sell_shares,
+            "cost_eur": cost_basis,
+            "proceeds_eur": proceeds_eur,
+            "price_usd": price_usd,
             "pnl": pnl,
             "closed_at": _now_utc(),
         }
-        holding["shares"] = round(holding["shares"] - sell_shares, 8)
+        remaining_shares = round(total_shares - sell_shares, 8)
+        remaining_cost = round(holding["total_cost_eur"] - cost_basis, 4)
+        holdings = [
+            {**h, "shares": remaining_shares, "total_cost_eur": remaining_cost, "last_price_usd": price_usd}
+            if h["ticker"] == ticker else h
+            for h in holdings
+        ]
         holdings = [h for h in holdings if h["shares"] > 0.00001]
         trade_log = list(portfolio.get("trade_log", []))
         trade_log.append(trade)
         return {**portfolio, "holdings": holdings, "cash": round(cash, 2), "trade_log": trade_log}
 
     if action["action"] == "BUY":
-        price = action.get("last_price", 1.0)
-        buy_amount = float(action["amount"])
-        shares = buy_amount / price
-        cash -= buy_amount
+        shares = action["shares"]
+        price_usd = action["price_usd"]
+        cost_eur = action["cost_eur"]
+        cash -= cost_eur
         existing = next((h for h in holdings if h["ticker"] == ticker), None)
         if existing:
             total_shares = existing["shares"] + shares
-            new_avg = (existing["avg_buy_price"] * existing["shares"] + price * shares) / total_shares
+            total_cost = existing["total_cost_eur"] + cost_eur
             holdings = [
-                {**h, "avg_buy_price": round(new_avg, 6), "shares": round(total_shares, 8), "last_price": price}
+                {**h, "shares": round(total_shares, 8), "total_cost_eur": round(total_cost, 4), "last_price_usd": price_usd}
                 if h["ticker"] == ticker else h
                 for h in holdings
             ]
@@ -85,8 +94,8 @@ def apply_action(portfolio: dict, action: dict) -> dict:
             holdings.append({
                 "ticker": ticker,
                 "shares": round(shares, 8),
-                "avg_buy_price": price,
-                "last_price": price,
+                "total_cost_eur": round(cost_eur, 4),
+                "last_price_usd": price_usd,
             })
         watchlist = [t for t in portfolio["watchlist"] if t != ticker]
         return {**portfolio, "holdings": holdings, "cash": round(cash, 2), "watchlist": watchlist}
