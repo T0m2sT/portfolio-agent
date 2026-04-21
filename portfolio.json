@@ -1,12 +1,18 @@
 {
-  "cash": 100.0,
-  "holdings": [],
+  "cash": 60.04,
+  "holdings": [
+    {
+      "ticker": "MSFT",
+      "shares": 0.11062412,
+      "avg_buy_price": 361.2232,
+      "last_price": 361.2232
+    }
+  ],
   "watchlist": [
     "SPY",
     "QQQ",
     "NVDA",
     "TSLA",
-    "MSFT",
     "META",
     "AMZN"
   ],
