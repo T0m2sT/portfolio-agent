@@ -1,25 +1,16 @@
 {
-  "cash": 101.0,
+  "cash": 100.0,
   "holdings": [],
   "watchlist": [
     "SPY",
     "QQQ",
     "NVDA",
     "TSLA",
+    "MSFT",
     "META",
     "AMZN"
   ],
   "last_run": null,
   "last_alert": null,
-  "trade_log": [
-    {
-      "ticker": "MSFT",
-      "shares": 0.1106108,
-      "cost_eur": 39.97,
-      "proceeds_eur": 40.97,
-      "price_usd": 427.17,
-      "pnl": 1.0,
-      "closed_at": "2026-04-21 22:32 UTC"
-    }
-  ]
+  "trade_log": []
 }
