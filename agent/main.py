@@ -38,6 +38,9 @@ def run() -> None:
         buzz_tickers = [t for t in trending if t not in all_tickers]
         logger.info("Fetching prices and news for: %s", all_tickers + buzz_tickers)
         prices = fetch_prices(all_tickers + buzz_tickers, api_key=finnhub_key)
+        for t in [h["ticker"] for h in portfolio["holdings"]]:
+            if t not in prices:
+                logger.error("fetch_prices: held ticker %s missing from price data — will be omitted from analyst prompt", t)
         news = fetch_news(all_tickers + buzz_tickers, api_key=news_api_key, finnhub_key=finnhub_key)
 
         logger.info("Calling Claude analyst")

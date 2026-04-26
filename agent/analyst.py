@@ -1,10 +1,13 @@
 import json
 import logging
+import os
 import re
 from datetime import datetime, timezone
 import anthropic
 
 logger = logging.getLogger(__name__)
+
+_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 
 SYSTEM_PROMPT = """You are an aggressive, high-conviction stock trader and analyst. You manage a small portfolio for a 20-year-old investor who wants maximum returns from individual stocks. You receive the current portfolio state, live prices, and recent news. Your job is to find the best possible move on every run — not to protect capital, but to exploit every edge the data gives you.
 
@@ -247,13 +250,15 @@ def analyse(portfolio: dict, prices: dict, news: dict, api_key: str, trending: l
     prompt = build_prompt(portfolio, prices, news, trending=trending)
     try:
         response = client.messages.create(
-            model="claude-sonnet-4-6",
+            model=_MODEL,
             max_tokens=4096,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": prompt}],
         )
     except anthropic.APIError as exc:
         raise RuntimeError(f"Claude API call failed: {exc}") from exc
+    if response.stop_reason == "max_tokens":
+        logger.warning("Claude response truncated (hit max_tokens) — JSON may be incomplete")
     result = parse_response(response.content[0].text)
     logger.info("analyse complete: %d actions returned", len(result.get("actions", [])))
     return result
