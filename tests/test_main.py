@@ -132,6 +132,51 @@ def test_run_stores_ticker_signals():
         assert saved["ticker_signals"]["MSFT"]["action"] == "HOLD"
 
 
+def test_run_prunes_stale_ticker_signals():
+    portfolio = {
+        **MOCK_PORTFOLIO,
+        "ticker_signals": {
+            "MSFT": {"action": "HOLD", "reasoning": "fine"},
+            "STALE": {"action": "BUY", "reasoning": "old signal for removed ticker"},
+        },
+    }
+    with _patch_env(), \
+         patch("agent.main.is_market_open", return_value=True), \
+         patch("agent.main.load_portfolio", return_value=portfolio), \
+         patch("agent.main.fetch_trending_tickers", return_value=[]), \
+         patch("agent.main.fetch_prices", return_value=MOCK_PRICES), \
+         patch("agent.main.fetch_news", return_value=MOCK_NEWS), \
+         patch("agent.main.analyse", return_value=MOCK_RESULT_HOLD), \
+         patch("agent.main.save_portfolio") as mock_save, \
+         patch("agent.main.send_message"), \
+         patch("agent.main.format_no_action", return_value="msg"):
+        from agent.main import run
+        run()
+        saved = mock_save.call_args[0][0]
+        assert "STALE" not in saved["ticker_signals"]
+        assert "MSFT" in saved["ticker_signals"]
+
+def test_run_keeps_shorted_ticker_signals():
+    portfolio = {
+        **MOCK_PORTFOLIO,
+        "trade_log": [{"ticker": "TSLA", "short": True, "pnl": 0, "shares": 1}],
+        "ticker_signals": {"TSLA": {"action": "SELL", "reasoning": "bearish"}},
+    }
+    with _patch_env(), \
+         patch("agent.main.is_market_open", return_value=True), \
+         patch("agent.main.load_portfolio", return_value=portfolio), \
+         patch("agent.main.fetch_trending_tickers", return_value=[]), \
+         patch("agent.main.fetch_prices", return_value=MOCK_PRICES), \
+         patch("agent.main.fetch_news", return_value=MOCK_NEWS), \
+         patch("agent.main.analyse", return_value=MOCK_RESULT_HOLD), \
+         patch("agent.main.save_portfolio") as mock_save, \
+         patch("agent.main.send_message"), \
+         patch("agent.main.format_no_action", return_value="msg"):
+        from agent.main import run
+        run()
+        saved = mock_save.call_args[0][0]
+        assert "TSLA" in saved["ticker_signals"]
+
 def test_run_sends_error_message_on_exception():
     with _patch_env(), \
          patch("agent.main.is_market_open", return_value=True), \

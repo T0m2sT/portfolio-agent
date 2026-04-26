@@ -94,6 +94,8 @@ def webhook():
                 "  _e.g. /sell NVDA 2 191.20 358.40_\n"
                 "  _e.g. /sell NVDA 50% 191.20 358.40_\n"
                 "  _e.g. /sell NVDA ALL 191.20 716.80_\n\n"
+                "/watchlist add TICKER — add to watchlist\n"
+                "/watchlist remove TICKER — remove from watchlist\n\n"
                 "/reset — wipe portfolio back to €100 clean state"
             ))
 
@@ -186,6 +188,37 @@ def webhook():
 
             mins_away = int((next_run - now).total_seconds() / 60)
             send(chat_id, f"🕐 Last run: {last_run}\n⏭ Next run: {next_run.strftime('%H:%M Lisbon')} (in {mins_away}m)")
+
+        elif text.startswith("/watchlist"):
+            parts = text.split()
+            if len(parts) != 3 or parts[1].lower() not in ("add", "remove"):
+                send(chat_id, (
+                    "Usage:\n"
+                    "`/watchlist add TICKER`\n"
+                    "`/watchlist remove TICKER`"
+                ))
+            else:
+                _, cmd, ticker = parts
+                ticker = ticker.upper()
+                portfolio = get_portfolio()
+                watchlist = list(portfolio.get("watchlist", []))
+                held = [h["ticker"] for h in portfolio.get("holdings", [])]
+                if cmd.lower() == "add":
+                    if ticker in watchlist:
+                        send(chat_id, f"👀 {ticker} is already on the watchlist.")
+                    elif ticker in held:
+                        send(chat_id, f"⚠️ {ticker} is already held — no need to watch it.")
+                    else:
+                        watchlist.append(ticker)
+                        save_portfolio_github({**portfolio, "watchlist": watchlist})
+                        send(chat_id, f"✅ Added *{ticker}* to watchlist.\n👀 Watching: {', '.join(watchlist)}")
+                else:
+                    if ticker not in watchlist:
+                        send(chat_id, f"⚠️ {ticker} is not on the watchlist.")
+                    else:
+                        watchlist.remove(ticker)
+                        save_portfolio_github({**portfolio, "watchlist": watchlist})
+                        send(chat_id, f"✅ Removed *{ticker}* from watchlist.\n👀 Watching: {', '.join(watchlist) or 'nothing'}")
 
         elif text.startswith("/buy"):
             parts = text.split()

@@ -62,6 +62,16 @@ def run() -> None:
                 "action": action.get("action"),
                 "reasoning": action.get("reasoning", ""),
             }
+
+        # Prune stale signals — keep only tickers that are still relevant:
+        # held positions, watchlist, or tickers with an open short in the trade log
+        held_tickers = {h["ticker"] for h in portfolio["holdings"]}
+        shorted_tickers = {
+            t["ticker"] for t in portfolio.get("trade_log", [])
+            if t.get("short") and t["ticker"] not in held_tickers
+        }
+        active_tickers = held_tickers | set(watchlist) | shorted_tickers
+        ticker_signals = {t: s for t, s in ticker_signals.items() if t in active_tickers}
         portfolio["ticker_signals"] = ticker_signals
 
         # Keep last_alert for /reason and legacy bot commands

@@ -229,6 +229,53 @@ def test_sell_command_invalid_amount(client):
     assert "percentage" in mock_send.call_args[0][1].lower() or "number" in mock_send.call_args[0][1].lower()
 
 
+def test_watchlist_add(client):
+    with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
+         patch("bot.server.save_portfolio_github") as mock_save, \
+         patch("bot.server.send") as mock_send:
+        resp = _post(client, "/watchlist add TSLA")
+    assert resp.status_code == 200
+    saved = mock_save.call_args[0][0]
+    assert "TSLA" in saved["watchlist"]
+    assert "Added" in mock_send.call_args[0][1]
+
+def test_watchlist_remove(client):
+    with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
+         patch("bot.server.save_portfolio_github") as mock_save, \
+         patch("bot.server.send") as mock_send:
+        resp = _post(client, "/watchlist remove NVDA")
+    assert resp.status_code == 200
+    saved = mock_save.call_args[0][0]
+    assert "NVDA" not in saved["watchlist"]
+    assert "Removed" in mock_send.call_args[0][1]
+
+def test_watchlist_add_already_watched(client):
+    with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
+         patch("bot.server.send") as mock_send:
+        resp = _post(client, "/watchlist add NVDA")
+    assert resp.status_code == 200
+    assert "already on the watchlist" in mock_send.call_args[0][1]
+
+def test_watchlist_add_already_held(client):
+    with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
+         patch("bot.server.send") as mock_send:
+        resp = _post(client, "/watchlist add MSFT")
+    assert resp.status_code == 200
+    assert "already held" in mock_send.call_args[0][1]
+
+def test_watchlist_remove_not_present(client):
+    with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
+         patch("bot.server.send") as mock_send:
+        resp = _post(client, "/watchlist remove TSLA")
+    assert resp.status_code == 200
+    assert "not on the watchlist" in mock_send.call_args[0][1]
+
+def test_watchlist_bad_usage(client):
+    with patch("bot.server.send") as mock_send:
+        resp = _post(client, "/watchlist NVDA")
+    assert resp.status_code == 200
+    assert "Usage" in mock_send.call_args[0][1]
+
 def test_webhook_rejects_invalid_secret(client):
     with patch("bot.server.TELEGRAM_WEBHOOK_SECRET", "correct-secret"):
         resp = client.post(
