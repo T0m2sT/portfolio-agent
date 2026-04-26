@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
+TELEGRAM_WEBHOOK_SECRET = os.environ.get("TELEGRAM_WEBHOOK_SECRET", "")
 ANTHROPIC_KEY = os.environ["ANTHROPIC_API_KEY"]
 PORTFOLIO_URL = os.environ["PORTFOLIO_RAW_URL"]
 GITHUB_TOKEN = os.environ["GITHUB_TOKEN"]
@@ -64,6 +65,12 @@ def save_portfolio_github(portfolio: dict) -> None:
 
 @app.route(f"/webhook/{TELEGRAM_TOKEN}", methods=["POST"])
 def webhook():
+    if TELEGRAM_WEBHOOK_SECRET:
+        incoming = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "")
+        if incoming != TELEGRAM_WEBHOOK_SECRET:
+            logger.warning("Webhook received with invalid secret token")
+            return "unauthorized", 401
+
     data = request.json
     message = data.get("message", {})
     chat_id = str(message.get("chat", {}).get("id", ""))
@@ -218,6 +225,7 @@ def webhook():
                     "`/sell NVDA 2 191.20 358.40`\n"
                     "`/sell NVDA 50% 191.20 358.40`\n"
                     "`/sell NVDA ALL 191.20 716.80`\n"
+                    "`/sell TSLA 1 250.00 23.00` _(short — not held)_\n"
                     "_PROCEEDS\\_EUR is the exact amount credited in T212 (net of fees)._"
                 ))
             else:
@@ -242,8 +250,9 @@ def webhook():
                     else:
                         portfolio = get_portfolio()
                         holding = next((h for h in portfolio["holdings"] if h["ticker"] == ticker), None)
-                        if not holding:
-                            send(chat_id, f"⚠️ You don't hold {ticker}.")
+                        is_short = holding is None
+                        if is_short and amount_up in ("ALL", ) or (amount_up.endswith("%") and is_short):
+                            send(chat_id, f"⚠️ {ticker} is not held — use a share count for short sells (e.g. `1` or `2.5`).")
                         else:
                             action = {"action": "SELL", "ticker": ticker, "amount": amount_up, "price_usd": price_usd, "proceeds_eur": proceeds_eur}
                             updated = apply_action(portfolio, action)
@@ -251,7 +260,8 @@ def webhook():
                             pnl = last_trade.get("pnl", 0)
                             pnl_str = f"+€{pnl:.2f}" if pnl >= 0 else f"-€{abs(pnl):.2f}"
                             save_portfolio_github(updated)
-                            send(chat_id, f"✅ *SELL recorded*\n{ticker} {amount_up} @ ${price_usd:.2f}\nProceeds: €{proceeds_eur:.2f} | P&L: {pnl_str} | Cash now: €{updated['cash']:.2f}")
+                            label = "SHORT recorded" if is_short else "SELL recorded"
+                            send(chat_id, f"✅ *{label}*\n{ticker} {amount_up} @ ${price_usd:.2f}\nProceeds: €{proceeds_eur:.2f} | P&L: {pnl_str} | Cash now: €{updated['cash']:.2f}")
 
     except Exception as exc:
         logger.error("Webhook handler error: %r", exc)

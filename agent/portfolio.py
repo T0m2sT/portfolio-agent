@@ -38,23 +38,38 @@ def apply_action(portfolio: dict, action: dict) -> dict:
 
     if action["action"] == "SELL":
         holding = next((h for h in holdings if h["ticker"] == ticker), None)
-        if not holding:
-            return {**portfolio, "holdings": holdings, "cash": cash}
         price_usd = action["price_usd"]
         proceeds_eur = action["proceeds_eur"]
         amount = action["amount"].upper()
-        total_shares = holding["shares"]
-        if amount == "ALL":
-            sell_shares = total_shares
-        elif amount.endswith("%"):
-            pct = float(amount[:-1]) / 100
-            sell_shares = total_shares * pct
+
+        if holding:
+            # Closing or partially closing a held position
+            total_shares = holding["shares"]
+            if amount == "ALL":
+                sell_shares = total_shares
+            elif amount.endswith("%"):
+                pct = float(amount[:-1]) / 100
+                sell_shares = total_shares * pct
+            else:
+                sell_shares = float(amount)
+            sell_shares = min(round(sell_shares, 8), total_shares)
+            sell_fraction = sell_shares / total_shares
+            cost_basis = round(holding["total_cost_eur"] * sell_fraction, 4)
+            pnl = round(proceeds_eur - cost_basis, 2)
+            remaining_shares = round(total_shares - sell_shares, 8)
+            remaining_cost = round(holding["total_cost_eur"] - cost_basis, 4)
+            holdings = [
+                {**h, "shares": remaining_shares, "total_cost_eur": remaining_cost, "last_price_usd": price_usd}
+                if h["ticker"] == ticker else h
+                for h in holdings
+            ]
+            holdings = [h for h in holdings if h["shares"] > 0.00001]
         else:
-            sell_shares = float(amount)
-        sell_shares = min(round(sell_shares, 8), total_shares)
-        sell_fraction = sell_shares / total_shares
-        cost_basis = round(holding["total_cost_eur"] * sell_fraction, 4)
-        pnl = round(proceeds_eur - cost_basis, 2)
+            # Short sell — ticker not held, record as a short position with negative cost basis
+            sell_shares = float(amount) if amount not in ("ALL",) and not amount.endswith("%") else 0
+            cost_basis = 0.0
+            pnl = proceeds_eur  # full proceeds are P&L basis for shorts (buy-to-cover tracked separately)
+
         cash += proceeds_eur
         trade = {
             "ticker": ticker,
@@ -63,16 +78,9 @@ def apply_action(portfolio: dict, action: dict) -> dict:
             "proceeds_eur": proceeds_eur,
             "price_usd": price_usd,
             "pnl": pnl,
+            "short": holding is None,
             "closed_at": _now_utc(),
         }
-        remaining_shares = round(total_shares - sell_shares, 8)
-        remaining_cost = round(holding["total_cost_eur"] - cost_basis, 4)
-        holdings = [
-            {**h, "shares": remaining_shares, "total_cost_eur": remaining_cost, "last_price_usd": price_usd}
-            if h["ticker"] == ticker else h
-            for h in holdings
-        ]
-        holdings = [h for h in holdings if h["shares"] > 0.00001]
         trade_log = list(portfolio.get("trade_log", []))
         trade_log.append(trade)
         return {**portfolio, "holdings": holdings, "cash": round(cash, 2), "trade_log": trade_log}
@@ -86,8 +94,12 @@ def apply_action(portfolio: dict, action: dict) -> dict:
         if existing:
             total_shares = existing["shares"] + shares
             total_cost = existing["total_cost_eur"] + cost_eur
+            # Weighted average buy price in USD
+            avg_buy_price_usd = round(
+                (existing.get("avg_buy_price_usd", 0) * existing["shares"] + price_usd * shares) / total_shares, 2
+            )
             holdings = [
-                {**h, "shares": round(total_shares, 8), "total_cost_eur": round(total_cost, 4)}
+                {**h, "shares": round(total_shares, 8), "total_cost_eur": round(total_cost, 4), "avg_buy_price_usd": avg_buy_price_usd}
                 if h["ticker"] == ticker else h
                 for h in holdings
             ]

@@ -69,3 +69,40 @@ def test_apply_action_buy():
     assert round(result["cash"], 2) == 26.60
     assert result["holdings"][0]["ticker"] == "TSLA"
     assert round(result["holdings"][0]["shares"], 4) == 0.1
+
+def test_apply_action_buy_weighted_avg():
+    portfolio = {
+        "cash": 100.00,
+        "holdings": [{"ticker": "TSLA", "shares": 1.0, "avg_buy_price_usd": 200.00, "total_cost_eur": 40.00}],
+        "watchlist": [], "last_run": None, "last_alert": None
+    }
+    # Buy 1 more share at $300 — weighted avg should be (200*1 + 300*1) / 2 = $250
+    result = apply_action(portfolio, {"ticker": "TSLA", "action": "BUY", "shares": 1.0, "price_usd": 300.00, "cost_eur": 55.00})
+    holding = result["holdings"][0]
+    assert holding["avg_buy_price_usd"] == 250.00
+    assert round(holding["shares"], 1) == 2.0
+    assert round(holding["total_cost_eur"], 2) == 95.00
+
+def test_apply_action_short_sell_not_held():
+    portfolio = {
+        "cash": 50.00,
+        "holdings": [],
+        "watchlist": [], "last_run": None, "last_alert": None, "trade_log": []
+    }
+    result = apply_action(portfolio, {"ticker": "TSLA", "action": "SELL", "amount": "2", "price_usd": 250.00, "proceeds_eur": 46.00})
+    assert round(result["cash"], 2) == 96.00
+    assert len(result["holdings"]) == 0
+    trade = result["trade_log"][-1]
+    assert trade["ticker"] == "TSLA"
+    assert trade["short"] is True
+    assert trade["proceeds_eur"] == 46.00
+
+def test_apply_action_short_sell_logged_in_trade_log():
+    portfolio = {
+        "cash": 0.00,
+        "holdings": [],
+        "watchlist": [], "last_run": None, "last_alert": None, "trade_log": []
+    }
+    result = apply_action(portfolio, {"ticker": "NVDA", "action": "SELL", "amount": "1", "price_usd": 900.00, "proceeds_eur": 83.00})
+    assert len(result["trade_log"]) == 1
+    assert result["trade_log"][0]["short"] is True

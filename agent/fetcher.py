@@ -173,37 +173,50 @@ def fetch_prices(tickers: list[str], api_key: str = None) -> dict[str, dict]:
     return prices
 
 
-def fetch_news(tickers: list[str], api_key: str) -> dict[str, list[str]]:
-    """Fetch the latest headlines for each ticker from NewsAPI.
+def fetch_news(tickers: list[str], api_key: str, finnhub_key: str = None) -> dict[str, list[str]]:
+    """Fetch the latest headlines for each ticker.
+
+    Primary: Finnhub company news (real-time, no delay).
+    Fallback: NewsAPI (up to 12h delay on free tier).
 
     Returns a mapping of ticker -> [headline, ...] (up to 3 per ticker).
-    On any error (network, non-200 status, parse failure) the ticker
-    maps to an empty list.  Never raises.
-
-    Args:
-        tickers: List of ticker symbols to search for.
-        api_key: NewsAPI key supplied by the caller (must come from an
-                 environment variable — never hardcode).
+    Never raises.
     """
+    from datetime import date, timedelta
+    today = date.today().isoformat()
+    week_ago = (date.today() - timedelta(days=7)).isoformat()
+
     news: dict[str, list[str]] = {}
     for ticker in tickers:
-        try:
-            resp = requests.get(
-                "https://newsapi.org/v2/everything",
-                params={
-                    "q": ticker,
-                    "pageSize": 3,
-                    "sortBy": "publishedAt",
-                    "apiKey": api_key,
-                },
-                timeout=10,
-            )
-            if resp.status_code != 200:
-                news[ticker] = []
-                continue
-            articles = resp.json().get("articles", [])
-            news[ticker] = [a["title"] for a in articles[:3]]
-        except Exception as exc:
-            logger.warning("fetch_news failed for %s: %r", ticker, exc)
-            news[ticker] = []
+        headlines = []
+
+        # Primary: Finnhub real-time company news
+        if finnhub_key:
+            try:
+                resp = requests.get(
+                    f"{_FINNHUB_URL}/company-news",
+                    params={"symbol": ticker, "from": week_ago, "to": today, "token": finnhub_key},
+                    timeout=10,
+                )
+                if resp.status_code == 200:
+                    articles = resp.json()
+                    headlines = [a["headline"] for a in articles[:3] if a.get("headline")]
+            except Exception as exc:
+                logger.warning("fetch_news (Finnhub) failed for %s: %r", ticker, exc)
+
+        # Fallback: NewsAPI
+        if not headlines and api_key:
+            try:
+                resp = requests.get(
+                    "https://newsapi.org/v2/everything",
+                    params={"q": ticker, "pageSize": 3, "sortBy": "publishedAt", "apiKey": api_key},
+                    timeout=10,
+                )
+                if resp.status_code == 200:
+                    articles = resp.json().get("articles", [])
+                    headlines = [a["title"] for a in articles[:3]]
+            except Exception as exc:
+                logger.warning("fetch_news (NewsAPI) failed for %s: %r", ticker, exc)
+
+        news[ticker] = headlines
     return news

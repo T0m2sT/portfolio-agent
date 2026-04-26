@@ -188,12 +188,30 @@ def test_sell_command_success(client):
     mock_save.assert_called_once()
 
 
-def test_sell_command_not_held(client):
+def test_sell_command_short_with_share_count(client):
+    trade = {"ticker": "TSLA", "shares": 1.0, "pnl": 23.00, "price_usd": 250.00, "cost_eur": 0.0, "proceeds_eur": 23.00, "short": True}
+    updated = {**PORTFOLIO, "cash": 83.00, "trade_log": [trade]}
+    with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
+         patch("bot.server.apply_action", return_value=updated), \
+         patch("bot.server.save_portfolio_github"), \
+         patch("bot.server.send") as mock_send:
+        resp = _post(client, "/sell TSLA 1 250.00 23.00")
+    assert resp.status_code == 200
+    assert "SHORT recorded" in mock_send.call_args[0][1]
+
+def test_sell_command_short_rejects_all_on_not_held(client):
     with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
          patch("bot.server.send") as mock_send:
         resp = _post(client, "/sell TSLA ALL 880.00 100.00")
     assert resp.status_code == 200
-    assert "don't hold" in mock_send.call_args[0][1]
+    assert "not held" in mock_send.call_args[0][1]
+
+def test_sell_command_short_rejects_pct_on_not_held(client):
+    with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
+         patch("bot.server.send") as mock_send:
+        resp = _post(client, "/sell TSLA 50% 880.00 100.00")
+    assert resp.status_code == 200
+    assert "not held" in mock_send.call_args[0][1]
 
 
 def test_sell_command_wrong_args(client):
@@ -210,6 +228,27 @@ def test_sell_command_invalid_amount(client):
     assert resp.status_code == 200
     assert "percentage" in mock_send.call_args[0][1].lower() or "number" in mock_send.call_args[0][1].lower()
 
+
+def test_webhook_rejects_invalid_secret(client):
+    with patch("bot.server.TELEGRAM_WEBHOOK_SECRET", "correct-secret"):
+        resp = client.post(
+            "/webhook/test-token",
+            json={"message": {"chat": {"id": "123"}, "text": "/help"}},
+            headers={"X-Telegram-Bot-Api-Secret-Token": "wrong-secret"},
+            content_type="application/json",
+        )
+    assert resp.status_code == 401
+
+def test_webhook_accepts_valid_secret(client):
+    with patch("bot.server.TELEGRAM_WEBHOOK_SECRET", "correct-secret"), \
+         patch("bot.server.send"):
+        resp = client.post(
+            "/webhook/test-token",
+            json={"message": {"chat": {"id": "123"}, "text": "/help"}},
+            headers={"X-Telegram-Bot-Api-Secret-Token": "correct-secret"},
+            content_type="application/json",
+        )
+    assert resp.status_code == 200
 
 def test_webhook_exception_sends_error(client):
     with patch("bot.server.get_portfolio", side_effect=Exception("db error")), \

@@ -111,6 +111,49 @@ def test_fetch_prices_finnhub_5d_enrichment_failure_still_returns(requests_mock)
     assert result["NVDA"]["price"] == 880.00
     assert "week_pct" not in result["NVDA"]
 
+def test_fetch_news_uses_finnhub_primary(requests_mock):
+    from agent.fetcher import fetch_news
+    requests_mock.get(
+        "https://finnhub.io/api/v1/company-news",
+        json=[
+            {"headline": "NVDA beats earnings", "datetime": 1700000000},
+            {"headline": "NVDA raises guidance", "datetime": 1699990000},
+        ],
+    )
+    result = fetch_news(["NVDA"], api_key="newsapi-key", finnhub_key="finnhub-key")
+    assert "NVDA" in result
+    assert result["NVDA"][0] == "NVDA beats earnings"
+    assert len(result["NVDA"]) == 2
+
+def test_fetch_news_falls_back_to_newsapi_when_finnhub_empty(requests_mock):
+    from agent.fetcher import fetch_news
+    requests_mock.get("https://finnhub.io/api/v1/company-news", json=[])
+    requests_mock.get(
+        "https://newsapi.org/v2/everything",
+        json={"articles": [{"title": "NVDA headline from newsapi"}]},
+    )
+    result = fetch_news(["NVDA"], api_key="newsapi-key", finnhub_key="finnhub-key")
+    assert result["NVDA"][0] == "NVDA headline from newsapi"
+
+def test_fetch_news_falls_back_to_newsapi_when_finnhub_fails(requests_mock):
+    from agent.fetcher import fetch_news
+    requests_mock.get("https://finnhub.io/api/v1/company-news", exc=Exception("timeout"))
+    requests_mock.get(
+        "https://newsapi.org/v2/everything",
+        json={"articles": [{"title": "fallback headline"}]},
+    )
+    result = fetch_news(["NVDA"], api_key="newsapi-key", finnhub_key="finnhub-key")
+    assert result["NVDA"][0] == "fallback headline"
+
+def test_fetch_news_no_finnhub_key_uses_newsapi_only(requests_mock):
+    from agent.fetcher import fetch_news
+    requests_mock.get(
+        "https://newsapi.org/v2/everything",
+        json={"articles": [{"title": "newsapi only"}]},
+    )
+    result = fetch_news(["AAPL"], api_key="newsapi-key", finnhub_key=None)
+    assert result["AAPL"][0] == "newsapi only"
+
 def test_fetch_prices_yfinance_returns_week_fields():
     mock_ticker = MagicMock()
     mock_ticker.history.return_value = FULL_HIST
