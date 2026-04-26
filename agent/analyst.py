@@ -153,7 +153,7 @@ def _price_line(ticker: str, price_data: dict, avg_buy_usd: float | None = None,
 
     parts = [f"  {ticker}: ${current:.2f}"]
     if shares is not None:
-        parts.append(f"{shares} shares")
+        parts.append(f"{shares:.6g} shares")
     if position_usd is not None:
         parts.append(f"=${position_usd:.2f}")
     parts.append(f"today {pct_today:+.1f}%")
