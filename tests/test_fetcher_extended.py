@@ -2,8 +2,10 @@ import pytest
 import pandas as pd
 from unittest.mock import patch, MagicMock
 from agent.fetcher import fetch_prices, is_us_trading_day
-from datetime import date
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
+ET = ZoneInfo("America/New_York")
 
 FULL_HIST = pd.DataFrame({
     "Close": [100.00, 102.00, 101.00, 103.00, 105.00],
@@ -12,46 +14,33 @@ FULL_HIST = pd.DataFrame({
 })
 
 
-# is_us_trading_day
+# is_us_trading_day — uses `now` parameter to avoid datetime patching
 def test_is_us_trading_day_weekday_no_holiday(requests_mock):
     requests_mock.get(
         "https://finnhub.io/api/v1/stock/market-holiday",
         json={"data": []},
     )
-    with patch("agent.fetcher.datetime") as mock_dt:
-        mock_now = MagicMock()
-        mock_now.date.return_value = date(2026, 4, 28)  # Monday
-        mock_dt.now.return_value = mock_now
-        result = is_us_trading_day(api_key="test")
+    now = datetime(2026, 4, 28, 10, 0, tzinfo=ET)  # Monday
+    result = is_us_trading_day(api_key="test", now=now)
     assert result is True
 
 def test_is_us_trading_day_holiday(requests_mock):
     requests_mock.get(
         "https://finnhub.io/api/v1/stock/market-holiday",
-        json={"data": [{"atDate": "2026-07-04"}]},
+        json={"data": [{"atDate": "2026-07-03"}]},
     )
-    with patch("agent.fetcher.datetime") as mock_dt:
-        mock_now = MagicMock()
-        mock_now.date.return_value = date(2026, 7, 4)  # Saturday — but holiday check comes after weekday
-        mock_dt.now.return_value = mock_now
-        # weekday() for 2026-07-04 is Saturday=5, so it returns False at weekday check
-        result = is_us_trading_day(api_key="test")
+    now = datetime(2026, 7, 3, 10, 0, tzinfo=ET)  # Friday, but holiday
+    result = is_us_trading_day(api_key="test", now=now)
     assert result is False
 
 def test_is_us_trading_day_weekend_no_api():
-    with patch("agent.fetcher.datetime") as mock_dt:
-        mock_now = MagicMock()
-        mock_now.date.return_value = date(2026, 4, 26)  # Sunday
-        mock_dt.now.return_value = mock_now
-        result = is_us_trading_day(api_key=None)
+    now = datetime(2026, 4, 26, 10, 0, tzinfo=ET)  # Sunday
+    result = is_us_trading_day(api_key=None, now=now)
     assert result is False
 
 def test_is_us_trading_day_weekday_no_api():
-    with patch("agent.fetcher.datetime") as mock_dt:
-        mock_now = MagicMock()
-        mock_now.date.return_value = date(2026, 4, 28)  # Monday
-        mock_dt.now.return_value = mock_now
-        result = is_us_trading_day(api_key=None)
+    now = datetime(2026, 4, 28, 10, 0, tzinfo=ET)  # Monday
+    result = is_us_trading_day(api_key=None, now=now)
     assert result is True
 
 def test_is_us_trading_day_finnhub_failure_assumes_open(requests_mock):
@@ -59,11 +48,8 @@ def test_is_us_trading_day_finnhub_failure_assumes_open(requests_mock):
         "https://finnhub.io/api/v1/stock/market-holiday",
         exc=Exception("timeout"),
     )
-    with patch("agent.fetcher.datetime") as mock_dt:
-        mock_now = MagicMock()
-        mock_now.date.return_value = date(2026, 4, 28)  # Monday
-        mock_dt.now.return_value = mock_now
-        result = is_us_trading_day(api_key="test")
+    now = datetime(2026, 4, 28, 10, 0, tzinfo=ET)  # Monday
+    result = is_us_trading_day(api_key="test", now=now)
     assert result is True
 
 

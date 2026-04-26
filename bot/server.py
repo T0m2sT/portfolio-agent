@@ -102,10 +102,21 @@ def webhook():
             if not alert:
                 send(chat_id, "No recent alert to explain.")
             else:
-                reasoning = alert.get("reasoning", "No reasoning available.")
                 ticker = alert.get("ticker", "")
                 action = alert.get("action", "")
-                send(chat_id, f"🧠 *Analysis — {action} {ticker}*\n\n{reasoning}")
+                reasoning = alert.get("reasoning", "No reasoning available.")
+                confidence = alert.get("confidence", "")
+                session = alert.get("market_session", "")
+                risks = alert.get("risks", [])
+                header = f"🧠 *Analysis — {action} {ticker}*"
+                if confidence:
+                    header += f"  ·  {confidence} confidence"
+                if session:
+                    header += f"  ·  {session}"
+                body = f"{header}\n\n{reasoning}"
+                if risks:
+                    body += "\n\n⚠️ *Risks:*\n" + "\n".join(f"- {r}" for r in risks)
+                send(chat_id, body)
 
         elif text == "/portfolio":
             portfolio = get_portfolio()

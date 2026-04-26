@@ -1,7 +1,11 @@
 import pytest
-from datetime import datetime, timezone
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from unittest.mock import patch
-from agent.analyst import _market_session, _price_line, build_prompt
+from agent.analyst import _price_line, build_prompt
+from agent.session import get_market_session
+
+ET = ZoneInfo("America/New_York")
 
 PORTFOLIO = {
     "cash": 50.00,
@@ -16,26 +20,26 @@ PRICES = {
 NEWS = {"MSFT": ["Microsoft beats earnings"], "NVDA": []}
 
 
-# _market_session
+# get_market_session (ET-based)
 def test_market_session_premarket():
-    dt = datetime(2026, 4, 26, 10, 0, tzinfo=timezone.utc)
-    assert _market_session(dt) == "pre-market"
+    dt = datetime(2026, 4, 26, 6, 0, tzinfo=ET)   # 06:00 ET = pre-market
+    assert get_market_session(dt) == "pre-market"
 
-def test_market_session_us_open():
-    dt = datetime(2026, 4, 26, 15, 0, tzinfo=timezone.utc)
-    assert _market_session(dt) == "US open (high volatility)"
+def test_market_session_regular():
+    dt = datetime(2026, 4, 26, 11, 0, tzinfo=ET)  # 11:00 ET = regular
+    assert get_market_session(dt) == "regular"
 
-def test_market_session_mid():
-    dt = datetime(2026, 4, 26, 17, 0, tzinfo=timezone.utc)
-    assert _market_session(dt) == "US mid-session"
+def test_market_session_after_hours():
+    dt = datetime(2026, 4, 26, 17, 0, tzinfo=ET)  # 17:00 ET = after-hours
+    assert get_market_session(dt) == "after-hours"
 
-def test_market_session_close():
-    dt = datetime(2026, 4, 26, 20, 0, tzinfo=timezone.utc)
-    assert _market_session(dt) == "US close"
+def test_market_session_closed():
+    dt = datetime(2026, 4, 26, 22, 0, tzinfo=ET)  # 22:00 ET = closed
+    assert get_market_session(dt) == "closed"
 
-def test_market_session_afterhours():
-    dt = datetime(2026, 4, 26, 22, 0, tzinfo=timezone.utc)
-    assert _market_session(dt) == "post-market / after-hours"
+def test_market_session_closed_early_morning():
+    dt = datetime(2026, 4, 26, 2, 0, tzinfo=ET)   # 02:00 ET = closed
+    assert get_market_session(dt) == "closed"
 
 
 # _price_line
@@ -65,12 +69,12 @@ def test_price_line_no_optional_fields():
 # build_prompt
 def test_build_prompt_includes_time():
     prompt = build_prompt(PORTFOLIO, PRICES, NEWS)
-    assert "CURRENT TIME" in prompt
+    assert "timestamp_utc" in prompt
     assert "UTC" in prompt
 
 def test_build_prompt_includes_session():
     prompt = build_prompt(PORTFOLIO, PRICES, NEWS)
-    assert "Session:" in prompt
+    assert "market_session" in prompt
 
 def test_build_prompt_includes_previous_signals():
     prompt = build_prompt(PORTFOLIO, PRICES, NEWS)
@@ -96,22 +100,38 @@ def test_build_prompt_includes_news():
     prompt = build_prompt(PORTFOLIO, PRICES, NEWS)
     assert "Microsoft beats earnings" in prompt
 
+def test_build_prompt_no_headlines_placeholder():
+    news = {"MSFT": ["Microsoft beats earnings"], "NVDA": []}
+    prompt = build_prompt(PORTFOLIO, PRICES, news)
+    assert "No recent headlines provided" in prompt
+
 def test_build_prompt_includes_watchlist():
     prompt = build_prompt(PORTFOLIO, PRICES, NEWS)
-    assert "Watchlist" in prompt
+    assert "WATCHLIST" in prompt
     assert "NVDA" in prompt
 
 def test_build_prompt_includes_buzz():
     prompt = build_prompt(PORTFOLIO, PRICES, NEWS, trending=["TSLA"])
-    assert "buzz" in prompt.lower()
+    assert "buzz" in prompt.lower() or "TRENDING" in prompt
     assert "TSLA" in prompt
 
 def test_build_prompt_buzz_excludes_held_and_watched():
     prompt = build_prompt(PORTFOLIO, PRICES, NEWS, trending=["MSFT", "NVDA", "TSLA"])
-    # MSFT is held, NVDA is on watchlist — only TSLA should appear in buzz
-    lines = [l for l in prompt.split("\n") if "buzz" in l.lower() or "TSLA" in l]
+    lines = [l for l in prompt.split("\n") if "TSLA" in l]
     assert any("TSLA" in l for l in lines)
 
 def test_build_prompt_cash_displayed():
     prompt = build_prompt(PORTFOLIO, PRICES, NEWS)
     assert "50.00" in prompt
+
+def test_build_prompt_session_note_regular():
+    prompt = build_prompt(PORTFOLIO, PRICES, NEWS, market_session="regular")
+    assert "reliable" in prompt
+
+def test_build_prompt_session_note_premarket():
+    prompt = build_prompt(PORTFOLIO, PRICES, NEWS, market_session="pre-market")
+    assert "low reliability" in prompt
+
+def test_build_prompt_session_note_closed():
+    prompt = build_prompt(PORTFOLIO, PRICES, NEWS, market_session="closed")
+    assert "closed" in prompt.lower()

@@ -36,6 +36,7 @@ def _patch_env():
 
 def test_run_skips_when_market_closed():
     with _patch_env(), \
+         patch("agent.main.get_market_session", return_value="regular"), \
          patch("agent.main.is_us_trading_day", return_value=False) as mock_open, \
          patch("agent.main.load_portfolio") as mock_load:
         from agent.main import run
@@ -46,6 +47,7 @@ def test_run_skips_when_market_closed():
 
 def test_run_sends_hold_summary_when_all_hold():
     with _patch_env(), \
+         patch("agent.main.get_market_session", return_value="regular"), \
          patch("agent.main.is_us_trading_day", return_value=True), \
          patch("agent.main.load_portfolio", return_value=MOCK_PORTFOLIO), \
          patch("agent.main.fetch_trending_tickers", return_value=[]), \
@@ -63,6 +65,7 @@ def test_run_sends_hold_summary_when_all_hold():
 
 def test_run_sends_individual_alerts_for_non_hold():
     with _patch_env(), \
+         patch("agent.main.get_market_session", return_value="regular"), \
          patch("agent.main.is_us_trading_day", return_value=True), \
          patch("agent.main.load_portfolio", return_value=MOCK_PORTFOLIO), \
          patch("agent.main.fetch_trending_tickers", return_value=[]), \
@@ -80,6 +83,7 @@ def test_run_sends_individual_alerts_for_non_hold():
 def test_run_updates_watchlist_additions():
     result = {**MOCK_RESULT_HOLD, "watchlist_additions": ["AMD"], "watchlist_removals": []}
     with _patch_env(), \
+         patch("agent.main.get_market_session", return_value="regular"), \
          patch("agent.main.is_us_trading_day", return_value=True), \
          patch("agent.main.load_portfolio", return_value=MOCK_PORTFOLIO), \
          patch("agent.main.fetch_trending_tickers", return_value=[]), \
@@ -98,6 +102,7 @@ def test_run_updates_watchlist_additions():
 def test_run_updates_watchlist_removals():
     result = {**MOCK_RESULT_HOLD, "watchlist_additions": [], "watchlist_removals": ["NVDA"]}
     with _patch_env(), \
+         patch("agent.main.get_market_session", return_value="regular"), \
          patch("agent.main.is_us_trading_day", return_value=True), \
          patch("agent.main.load_portfolio", return_value=MOCK_PORTFOLIO), \
          patch("agent.main.fetch_trending_tickers", return_value=[]), \
@@ -115,6 +120,7 @@ def test_run_updates_watchlist_removals():
 
 def test_run_stores_ticker_signals():
     with _patch_env(), \
+         patch("agent.main.get_market_session", return_value="regular"), \
          patch("agent.main.is_us_trading_day", return_value=True), \
          patch("agent.main.load_portfolio", return_value=MOCK_PORTFOLIO), \
          patch("agent.main.fetch_trending_tickers", return_value=[]), \
@@ -141,6 +147,7 @@ def test_run_prunes_stale_ticker_signals():
         },
     }
     with _patch_env(), \
+         patch("agent.main.get_market_session", return_value="regular"), \
          patch("agent.main.is_us_trading_day", return_value=True), \
          patch("agent.main.load_portfolio", return_value=portfolio), \
          patch("agent.main.fetch_trending_tickers", return_value=[]), \
@@ -163,6 +170,7 @@ def test_run_keeps_shorted_ticker_signals():
         "ticker_signals": {"TSLA": {"action": "SELL", "reasoning": "bearish"}},
     }
     with _patch_env(), \
+         patch("agent.main.get_market_session", return_value="regular"), \
          patch("agent.main.is_us_trading_day", return_value=True), \
          patch("agent.main.load_portfolio", return_value=portfolio), \
          patch("agent.main.fetch_trending_tickers", return_value=[]), \
@@ -179,6 +187,7 @@ def test_run_keeps_shorted_ticker_signals():
 
 def test_run_sends_error_message_on_exception():
     with _patch_env(), \
+         patch("agent.main.get_market_session", return_value="regular"), \
          patch("agent.main.is_us_trading_day", return_value=True), \
          patch("agent.main.load_portfolio", side_effect=Exception("disk error")), \
          patch("agent.main.send_message") as mock_send:

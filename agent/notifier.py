@@ -28,8 +28,10 @@ def format_alert(action: dict, prices: dict) -> str:
         amount = action.get("amount", "")
         headline = action.get("headline", "")
         reasoning = action.get("reasoning", "")
+        confidence = action.get("confidence", "")
+        conf_str = f"  ·  confidence: {confidence}" if confidence else ""
         lines = [
-            f"{emoji} *SELL {amount} · {ticker}*",
+            f"{emoji} *SELL {amount} · {ticker}*{conf_str}",
             now,
             "",
             f"💰 {pl}",
@@ -43,8 +45,10 @@ def format_alert(action: dict, prices: dict) -> str:
         amount = action.get("amount", "")
         headline = action.get("headline", "")
         reasoning = action.get("reasoning", "")
+        confidence = action.get("confidence", "")
+        conf_str = f"  ·  confidence: {confidence}" if confidence else ""
         lines = [
-            f"{emoji} *BUY €{amount} · {ticker}*",
+            f"{emoji} *BUY €{amount} · {ticker}*{conf_str}",
             now,
             "",
             f"💰 {pl}",
