@@ -2,7 +2,6 @@ import os
 import json
 import base64
 import logging
-import anthropic
 import requests
 from flask import Flask, request
 from agent.portfolio import apply_action
@@ -14,7 +13,6 @@ app = Flask(__name__)
 
 TELEGRAM_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_WEBHOOK_SECRET = os.environ.get("TELEGRAM_WEBHOOK_SECRET", "")
-ANTHROPIC_KEY = os.environ["ANTHROPIC_API_KEY"]
 PORTFOLIO_URL = os.environ["PORTFOLIO_RAW_URL"]
 GITHUB_TOKEN = os.environ["GITHUB_TOKEN"]
 GITHUB_REPO = os.environ["GITHUB_REPO"]  # e.g. "T0m2sT/portfolio-agent"
@@ -87,7 +85,6 @@ def webhook():
                 "/log — closed trade history with total P&L\n"
                 "/status — last agent run time\n"
                 "/reason — reasoning behind last BUY/SELL alert\n"
-                "/ask [question] — ask Claude anything about your portfolio\n\n"
                 "/buy TICKER SHARES PRICE\\_USD COST\\_EUR\n"
                 "  _e.g. /buy NVDA 2 118.40 221.35_\n\n"
                 "/sell TICKER SHARES|%|ALL PRICE\\_USD PROCEEDS\\_EUR\n"
@@ -109,20 +106,6 @@ def webhook():
                 ticker = alert.get("ticker", "")
                 action = alert.get("action", "")
                 send(chat_id, f"🧠 *Analysis — {action} {ticker}*\n\n{reasoning}")
-
-        elif text.startswith("/ask "):
-            question = text[5:].strip()
-            portfolio = get_portfolio()
-            alert = portfolio.get("last_alert", {})
-            context = f"Last alert: {json.dumps(alert, indent=2)}\nPortfolio cash: €{portfolio.get('cash', 0):.2f}"
-            client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
-            resp_ai = client.messages.create(
-                model="claude-haiku-4-5-20251001",
-                max_tokens=512,
-                system="You are a concise trading analyst. Answer the user's question about their portfolio in 2-4 sentences.",
-                messages=[{"role": "user", "content": f"Context:\n{context}\n\nQuestion: {question}"}],
-            )
-            send(chat_id, resp_ai.content[0].text)
 
         elif text == "/portfolio":
             portfolio = get_portfolio()

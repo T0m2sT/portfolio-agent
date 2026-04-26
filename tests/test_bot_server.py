@@ -17,7 +17,6 @@ PORTFOLIO = {
 def client():
     env = {
         "TELEGRAM_BOT_TOKEN": "test-token",
-        "ANTHROPIC_API_KEY": "test-anthropic",
         "PORTFOLIO_RAW_URL": "https://raw.example.com/portfolio.json",
         "GITHUB_TOKEN": "test-gh",
         "GITHUB_REPO": "user/repo",
@@ -108,16 +107,6 @@ def test_log_command_with_trades(client):
     assert "25.00" in msg
 
 
-def test_ask_command(client):
-    mock_response = MagicMock()
-    mock_response.content = [MagicMock(text="MSFT looks good.")]
-    with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
-         patch("bot.server.anthropic.Anthropic") as mock_anthropic, \
-         patch("bot.server.send") as mock_send:
-        mock_anthropic.return_value.messages.create.return_value = mock_response
-        resp = _post(client, "/ask what should I do with MSFT?")
-    assert resp.status_code == 200
-    assert "MSFT looks good." in mock_send.call_args[0][1]
 
 
 def test_reset_command(client):
