@@ -137,7 +137,9 @@ def _market_session(utc_now: datetime) -> str:
     return "post-market / after-hours"
 
 
-def _price_line(ticker: str, price_data: dict, avg_buy_usd: float | None = None, alloc_pct: float | None = None) -> str:
+def _price_line(ticker: str, price_data: dict, avg_buy_usd: float | None = None,
+                alloc_pct: float | None = None, shares: float | None = None,
+                position_usd: float | None = None) -> str:
     current = price_data.get("price")
     pct_today = price_data.get("pct_change", 0)
     week_pct = price_data.get("week_pct")
@@ -150,6 +152,10 @@ def _price_line(ticker: str, price_data: dict, avg_buy_usd: float | None = None,
         return f"  {ticker}: N/A"
 
     parts = [f"  {ticker}: ${current:.2f}"]
+    if shares is not None:
+        parts.append(f"{shares} shares")
+    if position_usd is not None:
+        parts.append(f"=${position_usd:.2f}")
     parts.append(f"today {pct_today:+.1f}%")
     if week_pct is not None:
         parts.append(f"5d {week_pct:+.1f}%")
@@ -185,22 +191,23 @@ def build_prompt(portfolio: dict, prices: dict, news: dict, trending: list[str] 
             lines.append(f"  {ticker}: {sig.get('action', 'N/A')} — {sig.get('reasoning', '')[:120]}")
         lines.append("")
 
-    # SECTION 3: PORTFOLIO STATE with allocation %
+    # SECTION 3: PORTFOLIO STATE
     cash = portfolio["cash"]
-    total_value = cash + sum(
-        (prices.get(h["ticker"], {}).get("price") or 0) * h["shares"] * 0.92  # rough EUR conversion
+    total_usd = sum(
+        (prices.get(h["ticker"], {}).get("price") or 0) * h["shares"]
         for h in portfolio["holdings"]
     )
     lines.append(f"## PORTFOLIO STATE")
-    lines.append(f"Cash: €{cash:.2f} | Total est. value: €{total_value:.2f}\n")
+    lines.append(f"Cash: €{cash:.2f} | Holdings total: ${total_usd:.2f} USD\n")
     lines.append("Holdings:")
     for h in portfolio["holdings"]:
         price_data = prices.get(h["ticker"], {})
         current_price = price_data.get("price")
         avg_buy_usd = h.get("avg_buy_price_usd", 0)
-        position_value_eur = (current_price or 0) * h["shares"] * 0.92
-        alloc_pct = (position_value_eur / total_value * 100) if total_value > 0 else 0
-        lines.append(_price_line(h["ticker"], price_data, avg_buy_usd=avg_buy_usd, alloc_pct=alloc_pct))
+        shares = h["shares"]
+        position_usd = (current_price or 0) * shares
+        alloc_pct = (position_usd / total_usd * 100) if total_usd > 0 else 0
+        lines.append(_price_line(h["ticker"], price_data, avg_buy_usd=avg_buy_usd, alloc_pct=alloc_pct, shares=shares, position_usd=position_usd))
         for hl in news.get(h["ticker"], []):
             lines.append(f"    - {hl}")
 
