@@ -2,7 +2,7 @@ import os
 import logging
 from dotenv import load_dotenv
 from agent.portfolio import load_portfolio, save_portfolio
-from agent.fetcher import fetch_prices, fetch_news, fetch_trending_tickers
+from agent.fetcher import fetch_prices, fetch_news, fetch_trending_tickers, is_market_open
 from agent.analyst import analyse
 from agent.notifier import format_alert, format_no_action, send_message
 
@@ -19,6 +19,10 @@ def run() -> None:
     finnhub_key = os.environ.get("FINNHUB_API_KEY")
 
     try:
+        if not is_market_open(api_key=finnhub_key):
+            logger.info("Market closed today (holiday or weekend) — skipping run")
+            return
+
         logger.info("Loading portfolio state")
         portfolio = load_portfolio()
 
@@ -49,9 +53,18 @@ def run() -> None:
                 watchlist.remove(removal)
         portfolio = {**portfolio, "watchlist": watchlist}
 
-        # Store last alert — use last non-HOLD action for reasoning
+        # Store per-ticker signals for flip-flop prevention
         actions = result.get("actions", [])
         non_hold = [a for a in actions if a.get("action") != "HOLD"]
+        ticker_signals = dict(portfolio.get("ticker_signals", {}))
+        for action in actions:
+            ticker_signals[action["ticker"]] = {
+                "action": action.get("action"),
+                "reasoning": action.get("reasoning", ""),
+            }
+        portfolio["ticker_signals"] = ticker_signals
+
+        # Keep last_alert for /reason and legacy bot commands
         alert_action = non_hold[-1] if non_hold else (actions[0] if actions else None)
         if alert_action:
             portfolio["last_alert"] = {

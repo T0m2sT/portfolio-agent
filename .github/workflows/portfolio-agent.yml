@@ -2,10 +2,16 @@ name: Portfolio Agent
 
 on:
   schedule:
-    - cron: '0 23 * * *'
-    - cron: '0 9 * * *'
-    - cron: '0 15 * * *'
-    - cron: '0 20 * * *'
+    - cron: '0 8 * * *'
+    - cron: '0 10 * * *'
+    - cron: '0 13 * * *'
+    - cron: '30 14 * * *'
+    - cron: '0 16 * * *'
+    - cron: '0 17 * * *'
+    - cron: '0 18 * * *'
+    - cron: '0 19 * * *'
+    - cron: '30 20 * * *'
+    - cron: '0 22 * * *'
   workflow_dispatch:
 
 permissions:

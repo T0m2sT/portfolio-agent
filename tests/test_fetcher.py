@@ -5,12 +5,18 @@ from agent.fetcher import fetch_prices, fetch_news, fetch_trending_tickers
 def test_fetch_prices_returns_dict():
     import pandas as pd
     mock_ticker = MagicMock()
-    mock_ticker.history.return_value = pd.DataFrame({"Close": [123.58, 118.40]})
+    mock_ticker.history.return_value = pd.DataFrame({
+        "Close": [123.58, 118.40],
+        "High": [125.00, 120.00],
+        "Low": [122.00, 117.00],
+    })
     with patch("agent.fetcher.yf.Ticker", return_value=mock_ticker):
         result = fetch_prices(["NVDA"])
     assert "NVDA" in result
     assert result["NVDA"]["price"] == 118.40
     assert round(result["NVDA"]["pct_change"], 1) == -4.2
+    assert result["NVDA"]["week_high"] == 125.00
+    assert result["NVDA"]["week_low"] == 117.00
 
 def test_fetch_prices_handles_missing_ticker():
     import pandas as pd

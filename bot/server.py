@@ -154,28 +154,28 @@ def webhook():
             send(chat_id, "🔄 Portfolio reset to €100.00 cash, no holdings.")
 
         elif text == "/status":
-            from datetime import datetime
+            from datetime import datetime, timedelta
             from zoneinfo import ZoneInfo
             portfolio = get_portfolio()
             last_run = portfolio.get("last_run", "Never")
-            
+
             lisbon_tz = ZoneInfo("Europe/Lisbon")
             now = datetime.now(lisbon_tz)
-            
-            # Lisbon schedule
-            schedule = [0, 10, 16, 21]
+
+            # Matches GitHub Actions cron in Lisbon summer (UTC+1)
+            # UTC: 8, 10, 13, 14:30, 16, 17, 18, 19, 20:30, 22 → Lisbon: 9, 11, 14, 15:30, 17, 18, 19, 20, 21:30, 23
+            schedule = [(9, 0), (11, 0), (14, 0), (15, 30), (17, 0), (18, 0), (19, 0), (20, 0), (21, 30), (23, 0)]
             today = now.replace(hour=0, minute=0, second=0, microsecond=0)
-            
-            # Find next run
+
             next_run = None
-            for hour in schedule:
-                candidate = today.replace(hour=hour)
+            for hour, minute in schedule:
+                candidate = today.replace(hour=hour, minute=minute)
                 if candidate > now:
                     next_run = candidate
                     break
-            
+
             if not next_run:
-                next_run = (today + datetime.timedelta(days=1)).replace(hour=schedule[0])
+                next_run = (today + timedelta(days=1)).replace(hour=schedule[0][0], minute=schedule[0][1])
 
             mins_away = int((next_run - now).total_seconds() / 60)
             send(chat_id, f"🕐 Last run: {last_run}\n⏭ Next run: {next_run.strftime('%H:%M Lisbon')} (in {mins_away}m)")
