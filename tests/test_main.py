@@ -1,26 +1,24 @@
 import pytest
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch, MagicMock
 
 
 MOCK_PORTFOLIO = {
-    "cash": 50.00,
-    "holdings": [{"ticker": "MSFT", "shares": 0.1, "avg_buy_price_usd": 400.00, "total_cost_eur": 40.00}],
-    "watchlist": ["NVDA"],
-    "ticker_signals": {},
+    "cash": 4000.00,
+    "holdings": [{"ticker": "MSFT", "shares": 0.1, "avg_buy_price_usd": 400.00, "total_cost_eur": 200.00, "bought_pct": 10}],
     "last_alert": None,
     "trade_log": [],
 }
 MOCK_PRICES = {"MSFT": {"price": 420.00, "pct_change": 1.5}}
-MOCK_NEWS = {"MSFT": [], "NVDA": []}
+MOCK_NEWS = {"__general__": ["Market rallies"], "MSFT": []}
 MOCK_RESULT_HOLD = {
     "actions": [{"ticker": "MSFT", "action": "HOLD", "reasoning": "No catalyst"}],
-    "watchlist_additions": [],
-    "watchlist_removals": [],
+    "overall_confidence": "low",
+    "risks": [],
 }
 MOCK_RESULT_BUY = {
-    "actions": [{"ticker": "NVDA", "action": "BUY", "amount": "20.00", "headline": "AI demand", "reasoning": "Strong thesis"}],
-    "watchlist_additions": [],
-    "watchlist_removals": [],
+    "actions": [{"ticker": "NVDA", "action": "BUY", "amount": "20%", "headline": "AI demand", "reasoning": "Strong thesis"}],
+    "overall_confidence": "high",
+    "risks": [],
 }
 
 
@@ -50,7 +48,6 @@ def test_run_sends_hold_summary_when_all_hold():
          patch("agent.main.get_market_session", return_value="regular"), \
          patch("agent.main.is_us_trading_day", return_value=True), \
          patch("agent.main.load_portfolio", return_value=MOCK_PORTFOLIO), \
-         patch("agent.main.fetch_trending_tickers", return_value=[]), \
          patch("agent.main.fetch_prices", return_value=MOCK_PRICES), \
          patch("agent.main.fetch_news", return_value=MOCK_NEWS), \
          patch("agent.main.analyse", return_value=MOCK_RESULT_HOLD), \
@@ -68,7 +65,6 @@ def test_run_sends_individual_alerts_for_non_hold():
          patch("agent.main.get_market_session", return_value="regular"), \
          patch("agent.main.is_us_trading_day", return_value=True), \
          patch("agent.main.load_portfolio", return_value=MOCK_PORTFOLIO), \
-         patch("agent.main.fetch_trending_tickers", return_value=[]), \
          patch("agent.main.fetch_prices", return_value=MOCK_PRICES), \
          patch("agent.main.fetch_news", return_value=MOCK_NEWS), \
          patch("agent.main.analyse", return_value=MOCK_RESULT_BUY), \
@@ -80,50 +76,47 @@ def test_run_sends_individual_alerts_for_non_hold():
         mock_send.assert_called_once_with("test-token", "123", "buy alert msg")
 
 
-def test_run_updates_watchlist_additions():
-    result = {**MOCK_RESULT_HOLD, "watchlist_additions": ["AMD"], "watchlist_removals": []}
+def test_run_fetches_opportunity_prices():
+    news_with_opp = {**MOCK_NEWS, "NVDA": ["Nvidia beats earnings"]}
     with _patch_env(), \
          patch("agent.main.get_market_session", return_value="regular"), \
          patch("agent.main.is_us_trading_day", return_value=True), \
          patch("agent.main.load_portfolio", return_value=MOCK_PORTFOLIO), \
-         patch("agent.main.fetch_trending_tickers", return_value=[]), \
-         patch("agent.main.fetch_prices", return_value=MOCK_PRICES), \
-         patch("agent.main.fetch_news", return_value=MOCK_NEWS), \
-         patch("agent.main.analyse", return_value=result), \
-         patch("agent.main.save_portfolio") as mock_save, \
+         patch("agent.main.fetch_prices", return_value=MOCK_PRICES) as mock_fetch_prices, \
+         patch("agent.main.fetch_news", return_value=news_with_opp), \
+         patch("agent.main.analyse", return_value=MOCK_RESULT_HOLD), \
+         patch("agent.main.save_portfolio"), \
          patch("agent.main.send_message"), \
          patch("agent.main.format_no_action", return_value="msg"):
         from agent.main import run
         run()
-        saved = mock_save.call_args[0][0]
-        assert "AMD" in saved["watchlist"]
+        # Should have been called twice — once for held, once for opportunity tickers
+        assert mock_fetch_prices.call_count == 2
 
 
-def test_run_updates_watchlist_removals():
-    result = {**MOCK_RESULT_HOLD, "watchlist_additions": [], "watchlist_removals": ["NVDA"]}
+def test_run_stores_last_alert():
     with _patch_env(), \
          patch("agent.main.get_market_session", return_value="regular"), \
          patch("agent.main.is_us_trading_day", return_value=True), \
          patch("agent.main.load_portfolio", return_value=MOCK_PORTFOLIO), \
-         patch("agent.main.fetch_trending_tickers", return_value=[]), \
          patch("agent.main.fetch_prices", return_value=MOCK_PRICES), \
          patch("agent.main.fetch_news", return_value=MOCK_NEWS), \
-         patch("agent.main.analyse", return_value=result), \
+         patch("agent.main.analyse", return_value=MOCK_RESULT_BUY), \
          patch("agent.main.save_portfolio") as mock_save, \
          patch("agent.main.send_message"), \
-         patch("agent.main.format_no_action", return_value="msg"):
+         patch("agent.main.format_alert", return_value="alert"):
         from agent.main import run
         run()
         saved = mock_save.call_args[0][0]
-        assert "NVDA" not in saved["watchlist"]
+        assert saved["last_alert"]["ticker"] == "NVDA"
+        assert saved["last_alert"]["action"] == "BUY"
 
 
-def test_run_stores_ticker_signals():
+def test_run_stores_run_metadata():
     with _patch_env(), \
          patch("agent.main.get_market_session", return_value="regular"), \
          patch("agent.main.is_us_trading_day", return_value=True), \
          patch("agent.main.load_portfolio", return_value=MOCK_PORTFOLIO), \
-         patch("agent.main.fetch_trending_tickers", return_value=[]), \
          patch("agent.main.fetch_prices", return_value=MOCK_PRICES), \
          patch("agent.main.fetch_news", return_value=MOCK_NEWS), \
          patch("agent.main.analyse", return_value=MOCK_RESULT_HOLD), \
@@ -133,57 +126,10 @@ def test_run_stores_ticker_signals():
         from agent.main import run
         run()
         saved = mock_save.call_args[0][0]
-        assert "ticker_signals" in saved
-        assert "MSFT" in saved["ticker_signals"]
-        assert saved["ticker_signals"]["MSFT"]["action"] == "HOLD"
+        assert saved["last_market_session"] == "regular"
+        assert "last_analysis_confidence" in saved
+        assert "last_analysis_risks" in saved
 
-
-def test_run_prunes_stale_ticker_signals():
-    portfolio = {
-        **MOCK_PORTFOLIO,
-        "ticker_signals": {
-            "MSFT": {"action": "HOLD", "reasoning": "fine"},
-            "STALE": {"action": "BUY", "reasoning": "old signal for removed ticker"},
-        },
-    }
-    with _patch_env(), \
-         patch("agent.main.get_market_session", return_value="regular"), \
-         patch("agent.main.is_us_trading_day", return_value=True), \
-         patch("agent.main.load_portfolio", return_value=portfolio), \
-         patch("agent.main.fetch_trending_tickers", return_value=[]), \
-         patch("agent.main.fetch_prices", return_value=MOCK_PRICES), \
-         patch("agent.main.fetch_news", return_value=MOCK_NEWS), \
-         patch("agent.main.analyse", return_value=MOCK_RESULT_HOLD), \
-         patch("agent.main.save_portfolio") as mock_save, \
-         patch("agent.main.send_message"), \
-         patch("agent.main.format_no_action", return_value="msg"):
-        from agent.main import run
-        run()
-        saved = mock_save.call_args[0][0]
-        assert "STALE" not in saved["ticker_signals"]
-        assert "MSFT" in saved["ticker_signals"]
-
-def test_run_keeps_shorted_ticker_signals():
-    portfolio = {
-        **MOCK_PORTFOLIO,
-        "trade_log": [{"ticker": "TSLA", "short": True, "pnl": 0, "shares": 1}],
-        "ticker_signals": {"TSLA": {"action": "SELL", "reasoning": "bearish"}},
-    }
-    with _patch_env(), \
-         patch("agent.main.get_market_session", return_value="regular"), \
-         patch("agent.main.is_us_trading_day", return_value=True), \
-         patch("agent.main.load_portfolio", return_value=portfolio), \
-         patch("agent.main.fetch_trending_tickers", return_value=[]), \
-         patch("agent.main.fetch_prices", return_value=MOCK_PRICES), \
-         patch("agent.main.fetch_news", return_value=MOCK_NEWS), \
-         patch("agent.main.analyse", return_value=MOCK_RESULT_HOLD), \
-         patch("agent.main.save_portfolio") as mock_save, \
-         patch("agent.main.send_message"), \
-         patch("agent.main.format_no_action", return_value="msg"):
-        from agent.main import run
-        run()
-        saved = mock_save.call_args[0][0]
-        assert "TSLA" in saved["ticker_signals"]
 
 def test_run_sends_error_message_on_exception():
     with _patch_env(), \

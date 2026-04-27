@@ -1,10 +1,11 @@
 import json
 from datetime import datetime, timezone
 
+PORTFOLIO_PATH = "portfolio.json"
+
+
 def _now_utc() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-
-PORTFOLIO_PATH = "portfolio.json"
 
 
 def load_portfolio(path: str = PORTFOLIO_PATH) -> dict:
@@ -23,11 +24,6 @@ def save_portfolio(portfolio: dict, path: str = PORTFOLIO_PATH) -> None:
         json.dump(updated, f, indent=2)
 
 
-def compute_pnl(holding: dict) -> float:
-    avg_buy_price_usd = holding.get("avg_buy_price_usd", 0)
-    return (holding["last_price_usd"] - avg_buy_price_usd) * holding["shares"]
-
-
 def apply_action(portfolio: dict, action: dict) -> dict:
     holdings = [dict(h) for h in portfolio["holdings"]]
     cash = portfolio["cash"]
@@ -43,7 +39,6 @@ def apply_action(portfolio: dict, action: dict) -> dict:
         amount = action["amount"].upper()
 
         if holding:
-            # Closing or partially closing a held position
             total_shares = holding["shares"]
             if amount == "ALL":
                 sell_shares = total_shares
@@ -64,20 +59,20 @@ def apply_action(portfolio: dict, action: dict) -> dict:
                 for h in holdings
             ]
             holdings = [h for h in holdings if h["shares"] > 0.00001]
+            cost_basis_for_log = cost_basis
         else:
-            # Short sell — ticker not held, record as a short position with negative cost basis
-            sell_shares = float(amount) if amount not in ("ALL",) and not amount.endswith("%") else 0
-            cost_basis = 0.0
-            pnl = proceeds_eur  # full proceeds are P&L basis for shorts (buy-to-cover tracked separately)
+            sell_shares = float(amount) if not amount.endswith("%") and amount != "ALL" else 0
+            cost_basis_for_log = 0.0
+            pnl = proceeds_eur
 
         cash += proceeds_eur
         trade = {
             "ticker": ticker,
             "shares": sell_shares,
-            "cost_eur": cost_basis,
+            "cost_eur": cost_basis_for_log,
             "proceeds_eur": proceeds_eur,
             "price_usd": price_usd,
-            "pnl": pnl,
+            "pnl": round(pnl, 2),
             "short": holding is None,
             "closed_at": _now_utc(),
         }
@@ -87,19 +82,20 @@ def apply_action(portfolio: dict, action: dict) -> dict:
 
     if action["action"] == "BUY":
         shares = action["shares"]
-        price_usd = action["price_usd"]  # avg_buy_price_usd from /buy command
+        price_usd = action["price_usd"]
         cost_eur = action["cost_eur"]
+        bought_pct = action.get("bought_pct", 0)
         cash -= cost_eur
         existing = next((h for h in holdings if h["ticker"] == ticker), None)
         if existing:
             total_shares = existing["shares"] + shares
             total_cost = existing["total_cost_eur"] + cost_eur
-            # Weighted average buy price in USD
-            avg_buy_price_usd = round(
+            avg_buy = round(
                 (existing.get("avg_buy_price_usd", 0) * existing["shares"] + price_usd * shares) / total_shares, 2
             )
             holdings = [
-                {**h, "shares": round(total_shares, 8), "total_cost_eur": round(total_cost, 4), "avg_buy_price_usd": avg_buy_price_usd}
+                {**h, "shares": round(total_shares, 8), "total_cost_eur": round(total_cost, 4),
+                 "avg_buy_price_usd": avg_buy, "bought_pct": bought_pct}
                 if h["ticker"] == ticker else h
                 for h in holdings
             ]
@@ -109,8 +105,8 @@ def apply_action(portfolio: dict, action: dict) -> dict:
                 "shares": round(shares, 8),
                 "total_cost_eur": round(cost_eur, 4),
                 "avg_buy_price_usd": round(price_usd, 2),
+                "bought_pct": bought_pct,
             })
-        watchlist = [t for t in portfolio["watchlist"] if t != ticker]
-        return {**portfolio, "holdings": holdings, "cash": round(cash, 2), "watchlist": watchlist}
+        return {**portfolio, "holdings": holdings, "cash": round(cash, 2)}
 
     return {**portfolio, "holdings": holdings, "cash": cash}

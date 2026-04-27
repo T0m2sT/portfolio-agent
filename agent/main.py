@@ -2,13 +2,14 @@ import os
 import logging
 from dotenv import load_dotenv
 from agent.portfolio import load_portfolio, save_portfolio
-from agent.fetcher import fetch_prices, fetch_news, fetch_trending_tickers
+from agent.fetcher import fetch_prices, fetch_news
 from agent.session import get_market_session, is_us_trading_day
 from agent.analyst import analyse
 from agent.notifier import format_alert, format_no_action, send_message
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
+
 
 def run() -> None:
     load_dotenv()
@@ -27,73 +28,37 @@ def run() -> None:
             logger.info("US market closed today — skipping run")
             return
 
-        logger.info("Loading portfolio state")
         portfolio = load_portfolio()
+        held_tickers = [h["ticker"] for h in portfolio.get("holdings", [])]
 
-        all_tickers = (
-            [h["ticker"] for h in portfolio["holdings"]] +
-            portfolio["watchlist"]
-        )
+        logger.info("Fetching prices for held tickers: %s", held_tickers)
+        prices = fetch_prices(held_tickers, api_key=finnhub_key)
 
-        logger.info("Fetching trending tickers")
-        trending = fetch_trending_tickers(limit=10)
-        logger.info("Trending: %s", trending)
-
-        buzz_tickers = [t for t in trending if t not in all_tickers]
-        tickers_to_fetch = all_tickers + buzz_tickers
-
-        logger.info("Fetching prices and news for: %s", tickers_to_fetch)
-        prices = fetch_prices(tickers_to_fetch, api_key=finnhub_key)
-
-        for t in [h["ticker"] for h in portfolio["holdings"]]:
+        for t in held_tickers:
             if t not in prices:
-                logger.error("fetch_prices: held ticker %s missing from price data — will be omitted from analyst prompt", t)
+                logger.error("fetch_prices: held ticker %s missing from price data", t)
 
-        news = fetch_news(tickers_to_fetch, api_key=news_api_key, finnhub_key=finnhub_key)
+        logger.info("Fetching broad news")
+        news = fetch_news(held_tickers, news_api_key=news_api_key, finnhub_key=finnhub_key)
+
+        # Fetch prices for any opportunity tickers that appeared in news
+        opportunity_tickers = [t for t in news if t not in ("__general__",) and t not in held_tickers]
+        if opportunity_tickers:
+            logger.info("Fetching prices for opportunity tickers: %s", opportunity_tickers)
+            opp_prices = fetch_prices(opportunity_tickers, api_key=finnhub_key)
+            prices.update(opp_prices)
 
         logger.info("Calling Claude analyst")
-        result = analyse(portfolio, prices, news, api_key=anthropic_key,
-                         trending=trending, market_session=market_session)
+        result = analyse(portfolio, prices, news, api_key=anthropic_key, market_session=market_session)
 
-        # Update watchlist based on Claude's recommendations
-        watchlist = list(portfolio["watchlist"])
-        held_tickers = {h["ticker"] for h in portfolio["holdings"]}
-        for addition in result.get("watchlist_additions", []):
-            if addition not in watchlist and addition not in held_tickers:
-                watchlist.append(addition)
-        for removal in result.get("watchlist_removals", []):
-            if removal in watchlist:
-                watchlist.remove(removal)
-        portfolio = {**portfolio, "watchlist": watchlist}
-
-        # Store per-ticker signals — include confidence, headline, session for richer context
         actions = result.get("actions", [])
         non_hold = [a for a in actions if a.get("action") != "HOLD"]
-        ticker_signals = dict(portfolio.get("ticker_signals", {}))
-        for action in actions:
-            ticker_signals[action["ticker"]] = {
-                "action": action.get("action"),
-                "confidence": action.get("confidence"),
-                "headline": action.get("headline", ""),
-                "reasoning": action.get("reasoning", ""),
-                "market_session": market_session,
-            }
 
-        # Prune stale signals — keep only held, watchlist, and open shorts
-        shorted_tickers = {
-            t["ticker"] for t in portfolio.get("trade_log", [])
-            if t.get("short") and t["ticker"] not in held_tickers
-        }
-        active_tickers = held_tickers | set(watchlist) | shorted_tickers
-        ticker_signals = {t: s for t, s in ticker_signals.items() if t in active_tickers}
-        portfolio["ticker_signals"] = ticker_signals
-
-        # Store run metadata for /status and /reason
+        # Store last alert and run metadata
         portfolio["last_market_session"] = market_session
         portfolio["last_analysis_confidence"] = result.get("overall_confidence", "low")
         portfolio["last_analysis_risks"] = result.get("risks", [])
 
-        # Keep last_alert for /reason
         alert_action = non_hold[-1] if non_hold else (actions[0] if actions else None)
         if alert_action:
             portfolio["last_alert"] = {
@@ -107,7 +72,6 @@ def run() -> None:
                 "risks": result.get("risks", []),
             }
 
-        logger.info("Saving updated portfolio state")
         save_portfolio(portfolio)
 
         if non_hold:
@@ -127,6 +91,7 @@ def run() -> None:
         except Exception:
             pass
         raise
+
 
 if __name__ == "__main__":
     run()

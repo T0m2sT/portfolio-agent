@@ -4,9 +4,8 @@ from unittest.mock import patch, MagicMock
 
 
 PORTFOLIO = {
-    "cash": 60.00,
-    "holdings": [{"ticker": "MSFT", "shares": 0.5, "avg_buy_price_usd": 400.00, "total_cost_eur": 40.00}],
-    "watchlist": ["NVDA"],
+    "cash": 4000.00,
+    "holdings": [{"ticker": "MSFT", "shares": 0.5, "avg_buy_price_usd": 400.00, "total_cost_eur": 200.00, "bought_pct": 10}],
     "last_run": "2026-04-26T10:00:00+00:00",
     "last_alert": {"ticker": "MSFT", "action": "BUY", "reasoning": "Strong AI thesis", "all_actions": []},
     "trade_log": [],
@@ -55,6 +54,13 @@ def test_help_command(client):
     assert "/sell" in msg
 
 
+def test_help_no_watchlist_command(client):
+    with patch("bot.server.send") as mock_send:
+        _post(client, "/help")
+    msg = mock_send.call_args[0][1]
+    assert "/watchlist" not in msg
+
+
 def test_portfolio_command(client):
     with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
          patch("bot.server.send") as mock_send:
@@ -62,7 +68,7 @@ def test_portfolio_command(client):
     assert resp.status_code == 200
     msg = mock_send.call_args[0][1]
     assert "MSFT" in msg
-    assert "60.00" in msg
+    assert "4000.00" in msg
 
 
 def test_reason_command_with_alert(client):
@@ -81,8 +87,7 @@ def test_reason_command_no_alert(client):
          patch("bot.server.send") as mock_send:
         resp = _post(client, "/reason")
     assert resp.status_code == 200
-    msg = mock_send.call_args[0][1]
-    assert "No recent alert" in msg
+    assert "No recent alert" in mock_send.call_args[0][1]
 
 
 def test_log_command_no_trades(client):
@@ -107,15 +112,13 @@ def test_log_command_with_trades(client):
     assert "25.00" in msg
 
 
-
-
 def test_reset_command(client):
     with patch("bot.server.save_portfolio_github") as mock_save, \
          patch("bot.server.send") as mock_send:
         resp = _post(client, "/reset")
     assert resp.status_code == 200
     saved = mock_save.call_args[0][0]
-    assert saved["cash"] == 100.0
+    assert saved["cash"] == 5000.0
     assert saved["holdings"] == []
     assert "reset" in mock_send.call_args[0][1].lower()
 
@@ -132,20 +135,30 @@ def test_status_command(client):
 
 def test_buy_command_success(client):
     with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
-         patch("bot.server.apply_action", return_value={**PORTFOLIO, "cash": 20.00}) as mock_action, \
+         patch("bot.server.apply_action", return_value={**PORTFOLIO, "cash": 3750.00}), \
          patch("bot.server.save_portfolio_github") as mock_save, \
          patch("bot.server.send") as mock_send:
-        resp = _post(client, "/buy NVDA 0.5 880.00 40.00")
+        resp = _post(client, "/buy NVDA 0.5 880.00 250.00 5")
     assert resp.status_code == 200
     assert "BUY recorded" in mock_send.call_args[0][1]
     mock_save.assert_called_once()
+
+
+def test_buy_command_shows_bought_pct(client):
+    with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
+         patch("bot.server.apply_action", return_value={**PORTFOLIO, "cash": 3750.00}), \
+         patch("bot.server.save_portfolio_github"), \
+         patch("bot.server.send") as mock_send:
+        _post(client, "/buy NVDA 0.5 880.00 250.00 5")
+    msg = mock_send.call_args[0][1]
+    assert "5%" in msg or "5" in msg
 
 
 def test_buy_command_insufficient_cash(client):
     portfolio = {**PORTFOLIO, "cash": 5.00}
     with patch("bot.server.get_portfolio", return_value=portfolio), \
          patch("bot.server.send") as mock_send:
-        resp = _post(client, "/buy NVDA 0.5 880.00 40.00")
+        resp = _post(client, "/buy NVDA 0.5 880.00 250.00")
     assert resp.status_code == 200
     assert "Not enough cash" in mock_send.call_args[0][1]
 
@@ -166,7 +179,7 @@ def test_buy_command_invalid_numbers(client):
 
 def test_sell_command_success(client):
     trade = {"ticker": "MSFT", "shares": 0.25, "pnl": 5.00, "price_usd": 420.00, "cost_eur": 20.00, "proceeds_eur": 25.00}
-    updated = {**PORTFOLIO, "cash": 85.00, "trade_log": [trade]}
+    updated = {**PORTFOLIO, "cash": 4025.00, "trade_log": [trade]}
     with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
          patch("bot.server.apply_action", return_value=updated), \
          patch("bot.server.save_portfolio_github") as mock_save, \
@@ -179,7 +192,7 @@ def test_sell_command_success(client):
 
 def test_sell_command_short_with_share_count(client):
     trade = {"ticker": "TSLA", "shares": 1.0, "pnl": 23.00, "price_usd": 250.00, "cost_eur": 0.0, "proceeds_eur": 23.00, "short": True}
-    updated = {**PORTFOLIO, "cash": 83.00, "trade_log": [trade]}
+    updated = {**PORTFOLIO, "cash": 4023.00, "trade_log": [trade]}
     with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
          patch("bot.server.apply_action", return_value=updated), \
          patch("bot.server.save_portfolio_github"), \
@@ -188,12 +201,14 @@ def test_sell_command_short_with_share_count(client):
     assert resp.status_code == 200
     assert "SHORT recorded" in mock_send.call_args[0][1]
 
+
 def test_sell_command_short_rejects_all_on_not_held(client):
     with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
          patch("bot.server.send") as mock_send:
         resp = _post(client, "/sell TSLA ALL 880.00 100.00")
     assert resp.status_code == 200
     assert "not held" in mock_send.call_args[0][1]
+
 
 def test_sell_command_short_rejects_pct_on_not_held(client):
     with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
@@ -218,53 +233,6 @@ def test_sell_command_invalid_amount(client):
     assert "percentage" in mock_send.call_args[0][1].lower() or "number" in mock_send.call_args[0][1].lower()
 
 
-def test_watchlist_add(client):
-    with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
-         patch("bot.server.save_portfolio_github") as mock_save, \
-         patch("bot.server.send") as mock_send:
-        resp = _post(client, "/watchlist add TSLA")
-    assert resp.status_code == 200
-    saved = mock_save.call_args[0][0]
-    assert "TSLA" in saved["watchlist"]
-    assert "Added" in mock_send.call_args[0][1]
-
-def test_watchlist_remove(client):
-    with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
-         patch("bot.server.save_portfolio_github") as mock_save, \
-         patch("bot.server.send") as mock_send:
-        resp = _post(client, "/watchlist remove NVDA")
-    assert resp.status_code == 200
-    saved = mock_save.call_args[0][0]
-    assert "NVDA" not in saved["watchlist"]
-    assert "Removed" in mock_send.call_args[0][1]
-
-def test_watchlist_add_already_watched(client):
-    with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
-         patch("bot.server.send") as mock_send:
-        resp = _post(client, "/watchlist add NVDA")
-    assert resp.status_code == 200
-    assert "already on the watchlist" in mock_send.call_args[0][1]
-
-def test_watchlist_add_already_held(client):
-    with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
-         patch("bot.server.send") as mock_send:
-        resp = _post(client, "/watchlist add MSFT")
-    assert resp.status_code == 200
-    assert "already held" in mock_send.call_args[0][1]
-
-def test_watchlist_remove_not_present(client):
-    with patch("bot.server.get_portfolio", return_value=PORTFOLIO), \
-         patch("bot.server.send") as mock_send:
-        resp = _post(client, "/watchlist remove TSLA")
-    assert resp.status_code == 200
-    assert "not on the watchlist" in mock_send.call_args[0][1]
-
-def test_watchlist_bad_usage(client):
-    with patch("bot.server.send") as mock_send:
-        resp = _post(client, "/watchlist NVDA")
-    assert resp.status_code == 200
-    assert "Usage" in mock_send.call_args[0][1]
-
 def test_webhook_rejects_invalid_secret(client):
     with patch("bot.server.TELEGRAM_WEBHOOK_SECRET", "correct-secret"):
         resp = client.post(
@@ -274,6 +242,7 @@ def test_webhook_rejects_invalid_secret(client):
             content_type="application/json",
         )
     assert resp.status_code == 401
+
 
 def test_webhook_accepts_valid_secret(client):
     with patch("bot.server.TELEGRAM_WEBHOOK_SECRET", "correct-secret"), \
@@ -285,6 +254,7 @@ def test_webhook_accepts_valid_secret(client):
             content_type="application/json",
         )
     assert resp.status_code == 200
+
 
 def test_webhook_exception_sends_error(client):
     with patch("bot.server.get_portfolio", side_effect=Exception("db error")), \
