@@ -99,15 +99,27 @@ If the headline is vague, old, recycled, or sector-generic → treat as noise. W
 
 ## 6. SELL SIGNAL TRIGGERS
 
-Issue SELL (on any stock, held or not) when ANY of these apply:
+### SELL on HELD stocks (closing / reducing a position you own)
+Issue SELL on a held stock when ANY of these apply:
 - **Thesis invalidation:** Guidance collapse, management out, competitive threat confirmed, regulatory kill
 - **Negative fundamental surprise:** Earnings miss >10%, revenue miss, margin compression, guidance cut >15%
 - **Breaking negative news:** FDA rejection, product recall, major lawsuit, data breach, geopolitical impact
 - **Technical breakdown on catalyst:** Down >15% on specific bad news (not broad market selloff)
 - **Risk/reward gone:** Upside capped, downside open, no new bull catalysts
-- **Profit-taking:** Up >30% with no new bullish catalysts
+- **Profit-taking:** Up >30% with no new bullish catalysts and position has significant gains
 - **Opportunity cost:** No catalyst for 3+ runs, sideways price action, better opportunity elsewhere
-- **Bearish setup on non-held stock:** Strong negative news → short signal
+
+### SELL on NON-HELD stocks (opening a bearish / short position)
+Issue SELL on a non-held stock ONLY when there is a clear bearish directional signal:
+- **Strong negative catalyst:** FDA rejection, earnings miss, guidance cut, product failure, major lawsuit, regulatory action
+- **Confirmed downtrend:** Price breaking down with volume on specific negative news
+- **Thesis collapse:** Core business assumption invalidated by concrete event
+
+**CRITICAL — NON-HELD SELL RULES:**
+- NEVER issue SELL on a non-held stock to "capitalize gains" or for "profit-taking" — you have no position to take profits from.
+- NEVER issue SELL on a non-held stock due to opportunity cost or lack of catalysts — these are not reasons to open a short.
+- A non-held SELL signals a SHORT position — it must be driven by a concrete bearish directional catalyst, not absence of bullish news.
+- If a non-held stock has no strong negative catalyst, use HOLD or watchlist_removals instead.
 
 ## 7. PREVIOUS SIGNAL RULES
 
@@ -120,9 +132,11 @@ You will receive previous per-ticker signals.
 ## 8. POSITION SIZING
 
 - BUY: amount must be a euro value; must not exceed 40% of available cash in one trade
-- SELL held: amount may be "20%", "30%", "50%", or "ALL"
-- SELL non-held: amount must be a euro value sized like a new bearish position
+- SELL held: amount MUST be a percentage — "20%", "30%", "50%", or "ALL" — representing the share of your position to close
+- SELL non-held: amount MUST be a euro value (e.g. "150.00") representing the size of the new short/bearish position to open
 - HOLD: omit amount
+
+**Do NOT use a percentage for a non-held SELL. Do NOT use a euro amount for a held SELL.**
 
 ## 9. OUTPUT FORMAT
 
@@ -305,9 +319,13 @@ def build_prompt(
 
 def parse_response(raw: str) -> dict:
     cleaned = raw.strip()
+    # Try closed code fence first
     match = re.search(r"```(?:json)?\s*([\s\S]*?)```", cleaned)
     if match:
         cleaned = match.group(1).strip()
+    else:
+        # Truncated response: strip opening fence if present, take everything after
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned).strip()
     try:
         return json.loads(cleaned)
     except json.JSONDecodeError as e:
@@ -328,7 +346,7 @@ def analyse(
     try:
         response = client.messages.create(
             model=_MODEL,
-            max_tokens=4096,
+            max_tokens=8192,
             temperature=0,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": prompt}],
