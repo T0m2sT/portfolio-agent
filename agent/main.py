@@ -81,7 +81,7 @@ def run() -> None:
                 send_message(telegram_token, telegram_chat_id, msg)
             logger.info("Run complete — %d signal(s) sent", len(non_hold))
         else:
-            msg = format_no_action(actions, prices)
+            msg = format_no_action()
             send_message(telegram_token, telegram_chat_id, msg)
             logger.info("Run complete — no action signal sent")
 

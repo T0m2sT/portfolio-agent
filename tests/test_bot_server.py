@@ -272,14 +272,5 @@ def test_webhook_exception_sends_error(client):
 
 def test_notifier_format_no_action():
     from agent.notifier import format_no_action
-    actions = [
-        {"ticker": "MSFT", "action": "HOLD", "reasoning": "No catalyst"},
-        {"ticker": "NVDA", "action": "HOLD", "reasoning": "Waiting for entry"},
-    ]
-    prices = {"MSFT": {"price": 420.00, "pct_change": 1.5}, "NVDA": {"price": 880.00, "pct_change": -0.5}}
-    msg = format_no_action(actions, prices)
+    msg = format_no_action()
     assert "NO ACTION" in msg
-    assert "MSFT" in msg
-    assert "NVDA" in msg
-    assert "No catalyst" in msg
-    assert "$420.00" in msg

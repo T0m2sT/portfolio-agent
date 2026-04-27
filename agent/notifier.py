@@ -99,25 +99,9 @@ def format_alert_brief(action: dict, prices: dict) -> str:
     return f"{emoji} *{act} · {ticker} ({company})* · {confidence} confidence\n💰 {pl}\n📰 _{headline}_"
 
 
-def format_no_action(actions: list, prices: dict) -> str:
+def format_no_action() -> str:
     now = datetime.now(ZoneInfo("Europe/Lisbon")).strftime("%a %d %b · %H:%M %Z")
-    lines = [
-        f"🟡 *NO ACTION*",
-        now,
-        "",
-        "No high-conviction signal found. All positions reviewed:",
-        "─────────────────────",
-    ]
-    for a in actions:
-        ticker = a["ticker"]
-        pl = _price_line(ticker, prices)
-        note = a.get("reasoning", "Holding.")
-        lines.append(f"*{ticker}*  {pl}")
-        lines.append(note)
-        lines.append("")
-    lines.append("─────────────────────")
-    lines.append("Reply /reason to see last active signal")
-    return "\n".join(lines)
+    return f"🟡 *NO ACTION* · {now}\n\nNo high-confidence signal found. Holding all positions."
 
 
 def format_portfolio(portfolio: dict) -> str:
