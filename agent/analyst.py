@@ -97,9 +97,8 @@ def _holding_line(h: dict, prices: dict, total_eur: float) -> str:
     price_data = prices.get(ticker, {})
     current_price = price_data.get("price")
     shares = h["shares"]
-    avg_buy = h.get("avg_buy_price_usd", 0)
-    cost_eur = h.get("total_cost_eur", 0)
-    bought_pct = h.get("bought_pct", 0)
+    # Calculate bought_pct dynamically: (cost_eur / total_portfolio_eur) * 100
+    bought_pct = (cost_eur / total_eur) * 100 if total_eur > 0 else 0
 
     position_usd = (current_price or 0) * shares
     parts = [f"{ticker}"]
