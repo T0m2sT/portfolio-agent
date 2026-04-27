@@ -1,13 +1,6 @@
 {
-  "cash": 60.03,
-  "holdings": [
-    {
-      "ticker": "MSFT",
-      "shares": 0.1106108,
-      "total_cost_eur": 39.97,
-      "avg_buy_price_usd": 424.17
-    }
-  ],
+  "cash": 99.57,
+  "holdings": [],
   "watchlist": [
     "NVDA",
     "TSLA",
@@ -157,7 +150,18 @@
       "XE watchlist addition: X-Energy opened 31% above IPO price \u2014 IPO-day volatility is extreme and unreliable; adding to watchlist for post-IPO stabilization monitoring only."
     ]
   },
-  "trade_log": [],
+  "trade_log": [
+    {
+      "ticker": "MSFT",
+      "shares": 0.1106108,
+      "cost_eur": 39.97,
+      "proceeds_eur": 39.54,
+      "price_usd": 421.45,
+      "pnl": -0.43,
+      "short": false,
+      "closed_at": "2026-04-27 15:18 UTC"
+    }
+  ],
   "ticker_signals": {
     "MSFT": {
       "action": "SELL",
