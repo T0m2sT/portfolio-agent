@@ -7,6 +7,22 @@ logger = logging.getLogger(__name__)
 
 EMOJI = {"SELL": "🔴", "BUY": "🟢", "HOLD": "🟡"}
 
+COMPANY_NAMES = {
+    "AAPL": "Apple", "MSFT": "Microsoft", "NVDA": "NVIDIA", "TSLA": "Tesla",
+    "GOOGL": "Alphabet", "GOOG": "Alphabet", "AMZN": "Amazon", "META": "Meta",
+    "NFLX": "Netflix", "AMD": "AMD", "INTC": "Intel", "ORCL": "Oracle",
+    "CRM": "Salesforce", "ADBE": "Adobe", "QCOM": "Qualcomm", "AVGO": "Broadcom",
+    "TSM": "TSMC", "ASML": "ASML", "SAP": "SAP", "SHOP": "Shopify",
+    "SPY": "S&P 500 ETF", "QQQ": "Nasdaq ETF", "BTC": "Bitcoin", "ETH": "Ethereum",
+    "GLD": "Gold ETF", "SLV": "Silver ETF", "OIL": "Oil ETF",
+}
+
+
+def _company(ticker: str, action: dict = None) -> str:
+    if action and action.get("company_name"):
+        return action["company_name"]
+    return COMPANY_NAMES.get(ticker.upper(), ticker)
+
 
 def _price_line(ticker: str, prices: dict) -> str:
     price_data = prices.get(ticker, {})
@@ -32,7 +48,7 @@ def format_alert(action: dict, prices: dict) -> str:
         confidence = action.get("confidence", "")
         conf_str = f"  ·  confidence: {confidence}" if confidence else ""
         lines = [
-            f"{emoji} *SELL {amount_pct} (€{amount_eur}) · {ticker}*{conf_str}",
+            f"{emoji} *SELL {amount_pct} (€{amount_eur}) · {ticker} ({_company(ticker, action)})*{conf_str}",
             now,
             "",
             f"💰 {pl}",
@@ -50,7 +66,7 @@ def format_alert(action: dict, prices: dict) -> str:
         confidence = action.get("confidence", "")
         conf_str = f"  ·  confidence: {confidence}" if confidence else ""
         lines = [
-            f"{emoji} *BUY €{amount_eur} ({amount_pct}) · {ticker}*{conf_str}",
+            f"{emoji} *BUY €{amount_eur} ({amount_pct}) · {ticker} ({_company(ticker, action)})*{conf_str}",
             now,
             "",
             f"💰 {pl}",
@@ -62,7 +78,7 @@ def format_alert(action: dict, prices: dict) -> str:
         ]
     else:
         lines = [
-            f"{emoji} *HOLD · {ticker}*",
+            f"{emoji} *HOLD · {ticker} ({_company(ticker, action)})*",
             now,
             "",
             f"💰 {pl}",

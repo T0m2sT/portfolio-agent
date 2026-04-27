@@ -53,6 +53,7 @@ You will receive:
 - For new positions: only act on strong, specific, recent catalysts (earnings, product launch, regulatory decision, major partnership, macro shift).
 - Vague sector sentiment or recycled old news is NOT a catalyst.
 - If no strong opportunity exists, output HOLD for everything. Do not force trades.
+- Only suggest tickers that are available on Trading 212. Do not suggest OTC stocks, pink sheets, or instruments not listed on Trading 212.
 
 ## MARKET SESSION
 
@@ -72,6 +73,7 @@ Return STRICT JSON only. No markdown, no prose.
   "actions": [
     {
       "ticker": "NVDA",
+      "company_name": "NVIDIA Corporation",
       "action": "BUY | SELL | HOLD",
       "amount_pct": "15%",
       "amount_eur": 750.00,
