@@ -1,17 +1,11 @@
 {
-  "cash": 3000.0,
+  "cash": 4000.0,
   "holdings": [
     {
       "ticker": "CRUDE",
       "shares": 11.7050654,
       "total_cost_eur": 1000.0,
       "avg_buy_price_usd": 100.06
-    },
-    {
-      "ticker": "GLD",
-      "shares": 2.7731791,
-      "total_cost_eur": 1000.0,
-      "avg_buy_price_usd": 422.47
     }
   ],
   "last_run": "2026-04-28T21:38:06.549466+00:00",
@@ -70,7 +64,18 @@
       "FOMC week adds macro uncertainty - Fed commentary could move all asset classes significantly"
     ]
   },
-  "trade_log": [],
+  "trade_log": [
+    {
+      "ticker": "GLD",
+      "shares": 2.7731791,
+      "cost_eur": 1000.0,
+      "proceeds_eur": 1000.0,
+      "price_usd": 422.47,
+      "pnl": 0.0,
+      "short": false,
+      "closed_at": "2026-04-28 21:39 UTC"
+    }
+  ],
   "last_market_session": "after-hours",
   "last_analysis_confidence": "medium",
   "last_analysis_risks": [
