@@ -1,11 +1,17 @@
 {
-  "cash": 4000.0,
+  "cash": 3000.0,
   "holdings": [
     {
       "ticker": "CRUDE",
       "shares": 11.7050654,
       "total_cost_eur": 1000.0,
       "avg_buy_price_usd": 100.06
+    },
+    {
+      "ticker": "GLD",
+      "shares": 2.7731791,
+      "total_cost_eur": 1000.0,
+      "avg_buy_price_usd": 422.47
     }
   ],
   "last_run": "2026-04-28T17:45:54.634545+00:00",
