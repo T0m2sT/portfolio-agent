@@ -14,13 +14,13 @@
       "avg_buy_price_usd": 139.6
     }
   ],
-  "last_run": "2026-04-29T15:22:14.949411+00:00",
+  "last_run": "2026-04-29T16:11:36.256105+00:00",
   "last_alert": {
-    "ticker": "GDX",
+    "ticker": "QQQ",
     "action": "BUY",
     "confidence": "medium",
-    "headline": "Two Wins For Gold Miners Show Why This Time It's Different; Gold: Driven By The Winds Of War",
-    "reasoning": "Gold miners are highlighted as outperforming with 'Two Wins For Gold Miners Show Why This Time It's Different' \u2014 suggesting operational leverage to gold prices is being realized. While spot gold is in a short-term technical pullback, miners often lead recoveries and provide leveraged upside when gold stabilizes. Middle East tensions and FOMC uncertainty keep the macro bid under gold. GDX offers diversified miner exposure with higher beta than GLD. Entering on the dip with a 20% allocation as a complementary position to existing GLD holding, with the expectation that gold's macro tailwinds reassert post-FOMC.",
+    "headline": "A $1.1 Trillion Signal: Why Google, Amazon, And Meta Are About To Raise Guidance",
+    "reasoning": "The $1.1 trillion capex signal from Big Tech (Google, Amazon, Meta) is a strong, specific, and quantifiable catalyst suggesting upward earnings revisions are imminent. QQQ is up +0.1% today while SPY is down -0.4%, showing relative strength in tech. With major earnings beats and guidance raises expected, QQQ is the cleanest vehicle to capture this move. The FOMC decision today adds uncertainty, but tech's earnings momentum is a more direct driver. Position sized conservatively given macro uncertainty.",
     "market_session": "regular",
     "all_actions": [
       {
@@ -29,57 +29,47 @@
         "action": "HOLD",
         "headline": "Gold Selloff Deepens: Technical Breakdown And Rising Oil Prices Accelerate Bearish Momentum",
         "confidence": "medium",
-        "reasoning": "GLD is down 1.3% from cost and showing a 5-day decline of 3.2%, with headlines pointing to a technical breakdown and bearish momentum. However, the macro backdrop remains supportive: FOMC uncertainty, Middle East tensions (Iran nuclear/military threats), and ongoing geopolitical risk all underpin gold as a safe haven. The 'Buy Gold, Sell Silver' headline reinforces gold's relative strength vs. other metals. Selling into a technical dip with strong macro tailwinds would be premature. Hold and reassess post-FOMC decision."
+        "reasoning": "GLD is down -0.8% overall and -2.8% over 5 days, showing near-term weakness. However, the macro backdrop remains supportive: FOMC uncertainty, Middle East tensions, and geopolitical risk all underpin gold as a safe haven. The 'Gold Caught In The Middle' headline suggests indecision rather than a structural breakdown. With only -0.8% P&L and strong macro tailwinds still intact, selling here risks locking in a loss at a potential inflection point. Hold and reassess post-FOMC."
       },
       {
         "ticker": "USO",
         "company_name": "United States Oil Fund",
-        "action": "HOLD",
-        "headline": "Trump Tells Aides to Prepare for Extended Blockade of Iran - WSJ; UAE Exit From OPEC Marks A Big Shift In Oil Market",
-        "confidence": "high",
-        "reasoning": "USO is up 5.4% from cost and +2.1% today with strong 5-day momentum of +9.2%. The thesis is firing on multiple cylinders: a potential extended US blockade of Iran (WSJ), Iran warning of 'unprecedented military action,' and UAE's OPEC exit disrupting Saudi-controlled supply dynamics. These are fresh, material geopolitical catalysts that directly support elevated oil prices. The position is performing well and the news flow remains bullish. No reason to exit \u2014 hold and let the thesis play out."
-      },
-      {
-        "ticker": "UCO",
-        "company_name": "ProShares Ultra Bloomberg Crude Oil (2x Leveraged)",
-        "action": "BUY",
-        "amount_pct": "20%",
-        "amount_eur": 1000.0,
-        "headline": "Trump Tells Aides to Prepare for Extended Blockade of Iran - WSJ; Iran Warns Of 'Unprecedented Military Action'",
-        "confidence": "high",
-        "reasoning": "The Iran geopolitical escalation is accelerating with multiple fresh catalysts: WSJ reporting Trump is preparing an extended Iran blockade, Iran warning of unprecedented military action against US vessel seizures, and UAE breaking from OPEC signaling structural supply disruption. These are high-conviction, near-term oil price catalysts. UCO provides 2x leveraged exposure to crude oil, amplifying the USO thesis already in the portfolio. With oil momentum strong (+9.2% in 5 days on USO), a leveraged add is justified. Sizing at 20% of portfolio to stay within risk limits while capturing upside."
-      },
-      {
-        "ticker": "GDX",
-        "company_name": "VanEck Gold Miners ETF",
-        "action": "BUY",
-        "amount_pct": "20%",
-        "amount_eur": 1000.0,
-        "headline": "Two Wins For Gold Miners Show Why This Time It's Different; Gold: Driven By The Winds Of War",
+        "action": "SELL",
+        "amount_pct": "50%",
+        "amount_eur": 875.0,
+        "headline": "Trump Tells Aides to Prepare for Extended Blockade of Iran / UAE Exit From OPEC Marks A Big Shift In Oil Market",
         "confidence": "medium",
-        "reasoning": "Gold miners are highlighted as outperforming with 'Two Wins For Gold Miners Show Why This Time It's Different' \u2014 suggesting operational leverage to gold prices is being realized. While spot gold is in a short-term technical pullback, miners often lead recoveries and provide leveraged upside when gold stabilizes. Middle East tensions and FOMC uncertainty keep the macro bid under gold. GDX offers diversified miner exposure with higher beta than GLD. Entering on the dip with a 20% allocation as a complementary position to existing GLD holding, with the expectation that gold's macro tailwinds reassert post-FOMC."
+        "reasoning": "USO has delivered a strong +6.5% gain overall and +10.4% over 5 days, with today's +3.2% move likely pricing in the Iran blockade and geopolitical risk premium. The UAE OPEC exit is a structural bearish signal for oil supply discipline longer term, as it could increase production outside OPEC quotas. With a significant profit already locked in and the risk of a reversal if Iran tensions de-escalate or OPEC+ supply increases, trimming 50% of the position is prudent risk management. Retaining half preserves upside if the Iran blockade escalates further."
+      },
+      {
+        "ticker": "QQQ",
+        "company_name": "Invesco QQQ Trust",
+        "action": "BUY",
+        "amount_pct": "18%",
+        "amount_eur": 900.0,
+        "headline": "A $1.1 Trillion Signal: Why Google, Amazon, And Meta Are About To Raise Guidance",
+        "confidence": "medium",
+        "reasoning": "The $1.1 trillion capex signal from Big Tech (Google, Amazon, Meta) is a strong, specific, and quantifiable catalyst suggesting upward earnings revisions are imminent. QQQ is up +0.1% today while SPY is down -0.4%, showing relative strength in tech. With major earnings beats and guidance raises expected, QQQ is the cleanest vehicle to capture this move. The FOMC decision today adds uncertainty, but tech's earnings momentum is a more direct driver. Position sized conservatively given macro uncertainty."
       }
     ],
     "risks": [
-      "FOMC decision today could surprise hawkishly, pressuring both gold and risk assets simultaneously",
-      "Iran escalation headlines may be priced in short-term; any de-escalation signal would sharply reverse USO/UCO positions",
-      "UAE OPEC exit could increase supply rather than reduce it, creating a bearish oil surprise",
-      "UCO 2x leverage amplifies losses if oil reverses \u2014 daily rebalancing decay is a risk in volatile conditions",
-      "GDX miners carry operational and currency risk beyond spot gold price movements",
-      "No general market headlines available limits broader macro context assessment",
-      "Gold technical breakdown could deepen before macro tailwinds reassert, extending GLD drawdown"
+      "FOMC decision today could trigger sharp moves in all asset classes; rate guidance hawkishness would pressure both equities and gold",
+      "Iran blockade escalation could reverse the USO partial sell decision if oil spikes further on supply disruption",
+      "UAE OPEC exit timeline and magnitude are uncertain; oil supply impact may be delayed",
+      "Big Tech earnings guidance raises are anticipated but not yet confirmed; any miss would invalidate the QQQ thesis",
+      "No general market headlines available limits macro context; relying heavily on sector-specific news",
+      "EUR/USD fluctuations affect USD-denominated holdings' EUR returns"
     ]
   },
   "trade_log": [],
   "last_market_session": "regular",
   "last_analysis_confidence": "medium",
   "last_analysis_risks": [
-    "FOMC decision today could surprise hawkishly, pressuring both gold and risk assets simultaneously",
-    "Iran escalation headlines may be priced in short-term; any de-escalation signal would sharply reverse USO/UCO positions",
-    "UAE OPEC exit could increase supply rather than reduce it, creating a bearish oil surprise",
-    "UCO 2x leverage amplifies losses if oil reverses \u2014 daily rebalancing decay is a risk in volatile conditions",
-    "GDX miners carry operational and currency risk beyond spot gold price movements",
-    "No general market headlines available limits broader macro context assessment",
-    "Gold technical breakdown could deepen before macro tailwinds reassert, extending GLD drawdown"
+    "FOMC decision today could trigger sharp moves in all asset classes; rate guidance hawkishness would pressure both equities and gold",
+    "Iran blockade escalation could reverse the USO partial sell decision if oil spikes further on supply disruption",
+    "UAE OPEC exit timeline and magnitude are uncertain; oil supply impact may be delayed",
+    "Big Tech earnings guidance raises are anticipated but not yet confirmed; any miss would invalidate the QQQ thesis",
+    "No general market headlines available limits macro context; relying heavily on sector-specific news",
+    "EUR/USD fluctuations affect USD-denominated holdings' EUR returns"
   ]
 }
