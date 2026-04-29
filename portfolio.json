@@ -1,5 +1,5 @@
 {
-  "cash": 3000.0,
+  "cash": 2250.0,
   "holdings": [
     {
       "ticker": "GLD",
@@ -9,8 +9,8 @@
     },
     {
       "ticker": "USO",
-      "shares": 8.23454,
-      "total_cost_eur": 1000.0,
+      "shares": 10.41454,
+      "total_cost_eur": 1750.0,
       "avg_buy_price_usd": 139.6
     }
   ],
