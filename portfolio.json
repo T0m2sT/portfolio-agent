@@ -14,72 +14,60 @@
       "avg_buy_price_usd": 139.6
     }
   ],
-  "last_run": "2026-04-29T19:12:21.671083+00:00",
+  "last_run": "2026-04-29T20:08:01.472502+00:00",
   "last_alert": {
     "ticker": "TLT",
     "action": "BUY",
     "confidence": "medium",
-    "headline": "Middle East Turmoil Fuels Inflation Fears, Testing Fed's Patience / Fed Watch: Powell's Last Stand And What Comes Next?",
-    "reasoning": "TLT is down -0.4% today and trading at $85.82, near depressed levels. With FOMC this week and the Fed caught between supply-shock inflation and geopolitical risk, there is a contrarian opportunity: if the Fed signals a pause or dovish pivot under pressure, TLT could rally sharply. Additionally, if Middle East tensions escalate further into a risk-off event, Treasuries would benefit as a flight-to-safety asset. The risk/reward at current levels is asymmetric. Position sized conservatively given inflation headwinds.",
-    "market_session": "regular",
+    "headline": "April Fed Meeting: Powell's Final Call, Rates Steady / Supply Shocks Plus Inflation Bind The Fed's Hands",
+    "reasoning": "Fed held rates steady as expected, removing near-term rate hike risk. TLT at $85.70 is near multi-month lows, offering an asymmetric setup: if Middle East tensions escalate further and risk-off sentiment intensifies, long-duration Treasuries benefit from a flight-to-safety bid. The 'Fed's hands are bound' narrative means cuts are unlikely but hikes are also off the table, creating a floor for bonds. This is a tactical hedge against the equity/risk-asset exposure implied by USO, and a play on potential safe-haven rotation if oil-driven inflation fears tip into growth fears. After-hours entry carries gap risk but the catalyst (Fed hold) is fresh and material.",
+    "market_session": "after-hours",
     "all_actions": [
       {
         "ticker": "GLD",
         "company_name": "SPDR Gold Shares",
-        "action": "SELL",
-        "amount_pct": "100%",
-        "amount_eur": 985.0,
+        "action": "HOLD",
         "headline": "Gold Selloff Deepens: Technical Breakdown And Rising Oil Prices Accelerate Bearish Momentum",
         "confidence": "medium",
-        "reasoning": "GLD is down -1.3% overall and -3.3% over 5 days with a confirmed technical breakdown per the headline. Rising oil prices and Middle East tensions are redirecting safe-haven flows into energy rather than gold. Real yields are also cited as crushing gold in the short term. The thesis for holding gold as a safe haven is weakening while USO is outperforming strongly. Rotating out of GLD to redeploy into higher-conviction opportunities is the right move here."
+        "reasoning": "GLD is down -1.2% from cost and -3.2% over 5 days, showing near-term weakness. However, the macro backdrop remains supportive long-term: Middle East tensions (Strait of Hormuz, Iran warnings), FOMC holding rates steady, and geopolitical risk premium. The 'Real Yields Are Crushing Gold in Short Term' headline explains the near-term pressure but doesn't break the long-term thesis. With oil surging and Iran escalation risk elevated, gold's safe-haven bid should reassert. Holding through this technical weakness rather than selling into a potential reversal catalyst."
       },
       {
         "ticker": "USO",
         "company_name": "United States Oil Fund",
         "action": "HOLD",
-        "headline": "UAE Leaves OPEC: Here's What It Means For Oil Prices / Iran Warns Of 'Unprecedented Military Action'",
+        "headline": "Outlook For Oil As Strait Of Hormuz Closure, UAE Exit From OPEC Roils Energy Markets / Oil Surges 6%",
         "confidence": "high",
-        "reasoning": "USO is up +7.2% overall and +11.1% over 5 days with strong momentum. Multiple compounding catalysts remain active: UAE exit from OPEC reducing supply coordination, Strait of Hormuz closure risk, Iran threatening unprecedented military action against US vessel seizures, and oil surging 6% today. The geopolitical risk premium is building, not fading. Thesis remains fully intact \u2014 hold and let the position run."
-      },
-      {
-        "ticker": "USO",
-        "company_name": "United States Oil Fund",
-        "action": "BUY",
-        "amount_pct": "20%",
-        "amount_eur": 1000.0,
-        "headline": "Iran State-Run PressTV: Iran Has Warned Of 'Unprecedented Military Action' Against Continued U.S. Seizures Of Iran-Linked Vessels",
-        "confidence": "high",
-        "reasoning": "The convergence of UAE exiting OPEC (supply shock), Strait of Hormuz closure risk, and Iran's direct military threat creates an exceptionally strong near-term catalyst for oil prices. Oil already surged 6% today and momentum is accelerating. Adding to the existing winning position during regular session with confirmed price action is justified. The geopolitical escalation narrative has multiple legs and is not yet fully priced in. Risk is a sudden de-escalation, but current signals point to continued tension."
+        "reasoning": "USO is up +7.9% from cost and +11.8% over 5 days with today's +3.1% gain \u2014 a strong momentum trade with multiple live catalysts. UAE leaving OPEC removes a key production moderator, Strait of Hormuz closure risk is a direct supply shock threat, and Iran's warning of 'unprecedented military action' adds acute geopolitical premium. The thesis is very much intact and strengthening. After-hours session limits new action, but no reason to trim a position with this level of fundamental support. Will monitor for any de-escalation signals that could reverse the move."
       },
       {
         "ticker": "TLT",
         "company_name": "iShares 20+ Year Treasury Bond ETF",
         "action": "BUY",
-        "amount_pct": "20%",
-        "amount_eur": 1000.0,
-        "headline": "Middle East Turmoil Fuels Inflation Fears, Testing Fed's Patience / Fed Watch: Powell's Last Stand And What Comes Next?",
+        "amount_pct": "15%",
+        "amount_eur": 750.0,
+        "headline": "April Fed Meeting: Powell's Final Call, Rates Steady / Supply Shocks Plus Inflation Bind The Fed's Hands",
         "confidence": "medium",
-        "reasoning": "TLT is down -0.4% today and trading at $85.82, near depressed levels. With FOMC this week and the Fed caught between supply-shock inflation and geopolitical risk, there is a contrarian opportunity: if the Fed signals a pause or dovish pivot under pressure, TLT could rally sharply. Additionally, if Middle East tensions escalate further into a risk-off event, Treasuries would benefit as a flight-to-safety asset. The risk/reward at current levels is asymmetric. Position sized conservatively given inflation headwinds."
+        "reasoning": "Fed held rates steady as expected, removing near-term rate hike risk. TLT at $85.70 is near multi-month lows, offering an asymmetric setup: if Middle East tensions escalate further and risk-off sentiment intensifies, long-duration Treasuries benefit from a flight-to-safety bid. The 'Fed's hands are bound' narrative means cuts are unlikely but hikes are also off the table, creating a floor for bonds. This is a tactical hedge against the equity/risk-asset exposure implied by USO, and a play on potential safe-haven rotation if oil-driven inflation fears tip into growth fears. After-hours entry carries gap risk but the catalyst (Fed hold) is fresh and material."
       }
     ],
     "risks": [
-      "Geopolitical de-escalation (Iran-US diplomatic breakthrough or Hormuz reopening) would sharply reverse USO gains",
-      "FOMC hawkish surprise could pressure both TLT and risk assets simultaneously",
-      "Gold technical breakdown may reverse if risk-off sentiment intensifies beyond energy markets",
-      "UAE OPEC exit impact may already be partially priced into oil after today's 6% surge \u2014 chasing momentum carries gap-down risk",
-      "BTC/ETH data shows N/A pricing \u2014 crypto opportunities cannot be reliably assessed this session",
-      "Thin news flow on broader market (no general market headlines) reduces macro context reliability"
+      "After-hours session means limited liquidity and potential gap risk on TLT entry \u2014 price may open differently at regular session open.",
+      "Iran/Strait of Hormuz escalation could spike oil further but simultaneously crush equities and trigger a complex cross-asset reaction that may not benefit all positions uniformly.",
+      "UAE OPEC exit and Iran headlines may be partially priced into USO after +11.8% 5-day run \u2014 momentum could reverse sharply on any de-escalation news or ceasefire signal.",
+      "Fed holding rates steady is consensus \u2014 TLT's -0.3% today suggests bond market is not yet pricing in a dovish pivot; inflation fears from oil could keep long yields elevated and pressure TLT further.",
+      "Gold technical breakdown is a real risk \u2014 if real yields remain elevated and oil-driven inflation expectations rise without a flight-to-safety bid, GLD could continue lower toward the next support level.",
+      "No general market headlines available limits macro context quality for this session."
     ]
   },
   "trade_log": [],
-  "last_market_session": "regular",
+  "last_market_session": "after-hours",
   "last_analysis_confidence": "medium",
   "last_analysis_risks": [
-    "Geopolitical de-escalation (Iran-US diplomatic breakthrough or Hormuz reopening) would sharply reverse USO gains",
-    "FOMC hawkish surprise could pressure both TLT and risk assets simultaneously",
-    "Gold technical breakdown may reverse if risk-off sentiment intensifies beyond energy markets",
-    "UAE OPEC exit impact may already be partially priced into oil after today's 6% surge \u2014 chasing momentum carries gap-down risk",
-    "BTC/ETH data shows N/A pricing \u2014 crypto opportunities cannot be reliably assessed this session",
-    "Thin news flow on broader market (no general market headlines) reduces macro context reliability"
+    "After-hours session means limited liquidity and potential gap risk on TLT entry \u2014 price may open differently at regular session open.",
+    "Iran/Strait of Hormuz escalation could spike oil further but simultaneously crush equities and trigger a complex cross-asset reaction that may not benefit all positions uniformly.",
+    "UAE OPEC exit and Iran headlines may be partially priced into USO after +11.8% 5-day run \u2014 momentum could reverse sharply on any de-escalation news or ceasefire signal.",
+    "Fed holding rates steady is consensus \u2014 TLT's -0.3% today suggests bond market is not yet pricing in a dovish pivot; inflation fears from oil could keep long yields elevated and pressure TLT further.",
+    "Gold technical breakdown is a real risk \u2014 if real yields remain elevated and oil-driven inflation expectations rise without a flight-to-safety bid, GLD could continue lower toward the next support level.",
+    "No general market headlines available limits macro context quality for this session."
   ]
 }
