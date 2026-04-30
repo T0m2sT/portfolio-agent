@@ -50,11 +50,11 @@ The session is passed through every stage of the run — fetcher, analyst prompt
 
 ### 4. Data fetching
 
-The agent fetches three types of data for every ticker in your holdings, watchlist, and trending stocks:
+The agent fetches data for every ticker in your holdings plus a set of market-pulse instruments (SPY, QQQ, IWM, GLD, SLV, USO, BTC-USD, ETH-USD, TLT, HYG):
 
 - **Live prices** (Finnhub API, with yfinance fallback) — current price, today's % change, day high/low, 5-day high/low, week-over-week % change
-- **News headlines** (Finnhub company news primary, NewsAPI fallback) — up to 3 recent headlines per ticker; explicitly marked "No recent headlines provided" when empty
-- **Trending tickers** (Yahoo Finance) — top 10 trending US stocks added as market buzz
+- **News headlines** (Finnhub company news primary, NewsAPI fallback) — up to 8 headlines per held ticker, up to 5 per market-pulse ticker, up to 20 general market headlines; explicitly marked "No recent headlines" when empty
+- **Opportunity tickers** — any ticker that appears in news but is not currently held is fetched for prices and surfaced as a potential new position
 
 ---
 
@@ -62,40 +62,38 @@ The agent fetches three types of data for every ticker in your holdings, watchli
 
 All data is sent to Claude (`claude-sonnet-4-6`, `temperature=0`) with a structured prompt. Claude returns:
 
-- **`actions`** — one entry per holding and watchlist ticker: `BUY`, `SELL`, or `HOLD` with amount, headline, per-action `confidence`, and reasoning
-- **`watchlist_additions` / `watchlist_removals`**
+- **`actions`** — one entry per holding and any new opportunity tickers: `BUY`, `SELL`, or `HOLD` with amount (% and EUR), `company_name`, per-action `confidence`, and reasoning
 - **`overall_confidence`** — `low / medium / high` for the full run
 - **`risks`** — data quality issues or key uncertainties flagged by Claude
 
 The prompt includes:
 
 - **Market session** — Claude adapts signal aggressiveness to the session (pre-market signals favour watchlist additions over immediate buys)
-- **Per-ticker previous signals** — action, confidence, headline, and session from the last run, to prevent flip-flopping
-- **Portfolio allocation %** — each holding's share of total USD value
+- **Portfolio allocation %** — each holding's share of total EUR value at cost basis
 - **5-day price context** — weekly range and trend, not just today's move
-- **News quality filter** — Claude discards vague, recycled, or tangentially related headlines and says so explicitly
+- **News quality filter** — Claude discards vague, recycled, or tangentially related headlines
 
 Claude's strategy:
 - News is the primary signal — a strong, direct headline is enough to act
 - SELL signals can be issued for **any stock**, including ones not in the portfolio (short positions)
+- Only suggest tickers available on **Trading 212** (no OTC/pink sheets)
 - HOLD only when there is genuinely no edge
-- Every non-HOLD action names the specific catalyst and assesses its magnitude
+- Every non-HOLD action names the specific catalyst, assesses its magnitude, and includes the company name
 
 ---
 
 ### 6. Signals and output
 
-**If there are non-HOLD signals:** each one is sent as an individual Telegram alert with the headline, price, confidence level, and reasoning.
+**High-confidence non-HOLD signals:** each one is sent as an individual Telegram alert with the company name, headline, price, confidence level, and reasoning.
 
-**If everything is HOLD:** a single summary message lists all positions and current prices.
+**If no high-confidence signal exists:** a single "NO ACTION" message is sent with the timestamp.
 
 ---
 
 ### 7. Portfolio state update
 
 After each run, `portfolio.json` is committed back to the repo with:
-- Updated watchlist
-- Per-ticker signals (action, confidence, headline, session) for flip-flop prevention
+- Updated holdings and cash
 - `last_market_session`, `last_analysis_confidence`, `last_analysis_risks`
 - Last alert (for `/reason`)
 - Timestamp of last run
@@ -108,15 +106,15 @@ The bot server runs on Railway and listens for commands 24/7.
 
 | Command | Description |
 |---------|-------------|
-| `/portfolio` | Current holdings, cash balance, and avg buy prices |
+| `/portfolio` | Current holdings, cash balance, cost basis, and % of portfolio |
 | `/log` | Closed trade history with P&L per trade and total |
 | `/status` | Last agent run time and next scheduled run (Lisbon time) |
 | `/reason` | Full reasoning behind the last BUY/SELL alert, with confidence and risks |
-| `/buy TICKER SHARES PRICE_USD COST_EUR` | Record a buy (e.g. `/buy NVDA 2 880.00 40.00`) |
-| `/sell TICKER SHARES\|%\|ALL PRICE_USD PROCEEDS_EUR` | Record a sell or short (e.g. `/sell NVDA ALL 900.00 82.00`) |
-| `/watchlist add TICKER` | Add a ticker to the watchlist |
-| `/watchlist remove TICKER` | Remove a ticker from the watchlist |
-| `/reset` | Wipe portfolio back to €100 clean state |
+| `/buy TICKER SHARES PRICE_USD COST_EUR` | Record a buy (e.g. `/buy NVDA 2 118.40 221.35`) |
+| `/buy TICKER BUY_PCT% PROCEEDS_EUR` | Close a partial short position (e.g. `/buy NVDA 50% 120.00`) |
+| `/sell TICKER SELL_PCT% PROCEEDS_EUR` | Sell a % of a held position (e.g. `/sell NVDA 50% 358.40`) |
+| `/sell TICKER SHARES PRICE_USD COST_EUR` | Record a short sell (e.g. `/sell TSLA 1 250.00 23.00`) |
+| `/reset` | Wipe portfolio back to €5000 clean state |
 | `/help` | Show all available commands |
 
 ---
@@ -128,14 +126,14 @@ agent/
   main.py          # Orchestrates the full run cycle
   session.py       # Market session detection and trading day check
   analyst.py       # Claude prompt engineering and response parsing
-  fetcher.py       # Price, news, and trending data fetching
+  fetcher.py       # Price, news, and market-pulse data fetching
   portfolio.py     # Portfolio state management (load, save, apply actions)
   notifier.py      # Telegram message formatting and sending
 
 bot/
   server.py        # Flask webhook server for Telegram bot commands
 
-tests/             # Full test suite (107 tests)
+tests/             # Full test suite (108 tests)
 
 .github/workflows/
   portfolio-agent.yml   # Scheduled GitHub Actions workflow
@@ -152,7 +150,7 @@ portfolio.json     # Live portfolio state (auto-committed after each run)
 | `ANTHROPIC_API_KEY` | Claude API key |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token |
 | `TELEGRAM_CHAT_ID` | Your Telegram chat ID |
-| `NEWS_API_KEY` | NewsAPI key (fallback news source) |
+| `NEWS_API_KEY` | NewsAPI key (fallback news source and general market headlines) |
 | `FINNHUB_API_KEY` | Finnhub API key (real-time prices, news, holiday calendar) |
 | `GITHUB_TOKEN` | GitHub token (bot server writes portfolio.json via API) |
 | `GITHUB_REPO` | Repo in `owner/name` format |
